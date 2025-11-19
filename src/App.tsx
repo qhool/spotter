@@ -28,8 +28,21 @@ function PlaylistDisplay({ sdk }: { sdk: SpotifyApi}) {
 
   // generate tiles for the playlists
   const playlistTiles = playlists.map((playlist) => {
+    const coverImage = playlist.images && playlist.images.length > 0 ? playlist.images[0] : null;
+    
     return (
       <div key={playlist.id} className="playlist-tile">
+        <div className="playlist-image">
+          {coverImage ? (
+            <img 
+              src={coverImage.url} 
+              alt={`${playlist.name} cover`}
+              className="cover-image"
+            />
+          ) : (
+            <div className="placeholder-image">♪</div>
+          )}
+        </div>
         <div className="playlist-content">
           <h3 className="playlist-title">{playlist.name}</h3>
           {playlist.description && (
