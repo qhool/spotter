@@ -1,5 +1,5 @@
 import { useSpotify } from './hooks/useSpotify';
-import { Scopes, SearchResults, SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { Scopes, SpotifyApi, Page, SimplifiedPlaylist } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState } from 'react'
 import './App.css'
 
@@ -8,44 +8,46 @@ function App() {
   const sdk = useSpotify(
     import.meta.env.VITE_SPOTIFY_CLIENT_ID, 
     import.meta.env.VITE_REDIRECT_TARGET, 
-    Scopes.userDetails
+    Scopes.playlistRead
   );
 
   return sdk
-    ? (<SpotifySearch sdk={sdk} />) 
+    ? (<PlaylistDisplay sdk={sdk} />) 
     : (<></>);
 }
 
-function SpotifySearch({ sdk }: { sdk: SpotifyApi}) {
-  const [results, setResults] = useState<SearchResults<["artist"]>>({} as SearchResults<["artist"]>);
+function PlaylistDisplay({ sdk }: { sdk: SpotifyApi}) {
+  const [playlists, setPlaylists] = useState<SimplifiedPlaylist[]>([]);
 
   useEffect(() => {
     (async () => {
-      const results = await sdk.search("The Beatles", ["artist"]);
-      setResults(() => results);      
+      const results = await sdk.currentUser.playlists.playlists();
+      setPlaylists(() => results.items);      
     })();
   }, [sdk]);
 
-  // generate a table for the results
-  const tableRows = results.artists?.items.map((artist) => {
+  // generate a table for the playlists
+  const tableRows = playlists.map((playlist) => {
     return (
-      <tr key={artist.id}>
-        <td>{artist.name}</td>
-        <td>{artist.popularity}</td>
-        <td>{artist.followers.total}</td>
+      <tr key={playlist.id}>
+        <td>{playlist.name}</td>
+        <td>{playlist.description || 'No description'}</td>
+        <td>{playlist.tracks?.total || 0}</td>
+        <td>{playlist.public ? 'Public' : 'Private'}</td>
       </tr>
     );
   });
 
   return (
     <>
-      <h1>Spotify Search for The Beatles</h1>
+      <h1>Your Spotify Playlists</h1>
       <table>
         <thead>
           <tr>
             <th>Name</th>
-            <th>Popularity</th>
-            <th>Followers</th>
+            <th>Description</th>
+            <th>Track Count</th>
+            <th>Visibility</th>
           </tr>
         </thead>
         <tbody>
