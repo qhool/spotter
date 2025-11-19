@@ -26,34 +26,29 @@ function PlaylistDisplay({ sdk }: { sdk: SpotifyApi}) {
     })();
   }, [sdk]);
 
-  // generate a table for the playlists
-  const tableRows = playlists.map((playlist) => {
+  // generate tiles for the playlists
+  const playlistTiles = playlists.map((playlist) => {
     return (
-      <tr key={playlist.id}>
-        <td>{playlist.name}</td>
-        <td>{playlist.description || 'No description'}</td>
-        <td>{playlist.tracks?.total || 0}</td>
-        <td>{playlist.public ? 'Public' : 'Private'}</td>
-      </tr>
+      <div key={playlist.id} className="playlist-tile">
+        <div className="playlist-content">
+          <h3 className="playlist-title">{playlist.name}</h3>
+          {playlist.description && (
+            <p className="playlist-description">{playlist.description}</p>
+          )}
+        </div>
+        <div className="playlist-meta">
+          <span className="track-count">{playlist.tracks?.total || 0} tracks</span>
+        </div>
+      </div>
     );
   });
 
   return (
     <>
       <h1>Your Spotify Playlists</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Description</th>
-            <th>Track Count</th>
-            <th>Visibility</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tableRows}
-        </tbody>
-      </table>
+      <div className="playlist-container">
+        {playlistTiles}
+      </div>
     </>
   )
 }
