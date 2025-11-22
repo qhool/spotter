@@ -1,9 +1,8 @@
 import { useSpotify } from './hooks/useSpotify';
 import { Scopes, SpotifyApi, SimplifiedPlaylist, SimplifiedAlbum } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState, useCallback } from 'react'
+import { ItemTile, ContentType } from './components/ItemTile';
 import './App.css'
-
-type ContentType = 'playlist' | 'album';
 
 function App() {
   
@@ -93,46 +92,9 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
   // generate tiles for the items
   const itemTiles = items
     .filter(item => item != null) // Filter out null/undefined items
-    .map((item: any) => {
-      console.log('Rendering item:', item); // Debug log
-      const coverImage = item.images && item.images.length > 0 ? item.images[0] : null;
-      
-      // Determine metadata based on content type
-      let metadata = '';
-      if (contentType === 'playlist') {
-        metadata = `${item.tracks?.total || 0} tracks`;
-      } else if (contentType === 'album') {
-        console.log('Album artists:', item.artists); // Debug log
-        const artistName = item.artists && item.artists.length > 0 ? item.artists[0].name : 'Unknown Artist';
-        const releaseYear = item.release_date ? item.release_date.slice(0, 4) : '';
-        metadata = `${artistName}${releaseYear ? ' • ' + releaseYear : ''}`;
-      }
-      
-      return (
-        <div key={item.id} className="playlist-tile">
-          <div className="playlist-image">
-            {coverImage ? (
-              <img 
-                src={coverImage.url} 
-                alt={`${item.name} cover`}
-                className="cover-image"
-              />
-            ) : (
-              <div className="placeholder-image">{contentType === 'playlist' ? '♪' : '♫'}</div>
-            )}
-          </div>
-          <div className="playlist-content">
-            <h3 className="playlist-title">{item.name}</h3>
-            {item.description && (
-              <p className="playlist-description">{item.description}</p>
-            )}
-          </div>
-          <div className="playlist-meta">
-            <span className="track-count">{metadata}</span>
-          </div>
-        </div>
-      );
-    });  return (
+    .map((item: any) => (
+      <ItemTile key={item.id} item={item} contentType={contentType} />
+    ));  return (
     <>
       <h1>Spotify Browser</h1>
       
