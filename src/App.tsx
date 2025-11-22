@@ -1,136 +1,170 @@
 import { useSpotify } from './hooks/useSpotify';
-import { Scopes, SpotifyApi, Page, SimplifiedPlaylist } from '@spotify/web-api-ts-sdk';
+import { Scopes, SpotifyApi, SimplifiedPlaylist, SimplifiedAlbum } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState, useCallback } from 'react'
 import './App.css'
+
+type ContentType = 'playlist' | 'album';
 
 function App() {
   
   const sdk = useSpotify(
     import.meta.env.VITE_SPOTIFY_CLIENT_ID, 
     import.meta.env.VITE_REDIRECT_TARGET, 
-    Scopes.playlistRead
-  );
+    Scopes.all
+);
 
   return sdk
-    ? (<PlaylistDisplay sdk={sdk} />) 
+    ? (<ItemBrowser sdk={sdk} />) 
     : (<></>);
 }
 
-function PlaylistDisplay({ sdk }: { sdk: SpotifyApi}) {
-  const [playlists, setPlaylists] = useState<SimplifiedPlaylist[]>([]);
+function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
+  const [items, setItems] = useState<(SimplifiedPlaylist | SimplifiedAlbum)[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showMyPlaylists, setShowMyPlaylists] = useState(true);
+  const [showMyItems, setShowMyItems] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [contentType, setContentType] = useState<ContentType>('playlist');
 
-  const fetchPlaylists = useCallback(async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       let results: any[] = [];
-      if (showMyPlaylists) {
-        // Fetch user's own playlists
-        const userPlaylists = await sdk.currentUser.playlists.playlists();
-        results = userPlaylists.items;
-        setPlaylists(results);
+      if (showMyItems) {
+        // Fetch user's own items
+        if (contentType === 'playlist') {
+          const userPlaylists = await sdk.currentUser.playlists.playlists();
+          results = userPlaylists.items;
+        } else if (contentType === 'album') {
+          const savedAlbums = await sdk.currentUser.albums.savedAlbums();
+          results = savedAlbums.items.map(item => item.album);
+        }
+        setItems(results);
       } else {
         // In search mode - clear the list and wait for manual search
-        setPlaylists([]);
+        setItems([]);
         setLoading(false);
         return;
       }
     } catch (error) {
-      console.error('Error fetching playlists:', error);
-      setPlaylists([]);
+      console.error('Error fetching items:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [sdk, showMyPlaylists]);
+  }, [sdk, showMyItems, contentType]);
 
   const performSearch = async () => {
     if (!searchQuery.trim()) return;
     
-    console.log('Performing search for:', searchQuery);
+    console.log('Performing search for:', searchQuery, 'type:', contentType);
     setLoading(true);
     try {
-      const searchResults = await sdk.search(searchQuery, ['playlist'], undefined, 20);
+      const searchResults = await sdk.search(searchQuery, [contentType], undefined, 20);
       console.log('Search results:', searchResults);
-      const results = (searchResults.playlists?.items || []).filter(item => item != null);
-      console.log('Processed results:', results.length, 'playlists');
-      setPlaylists(results as any);
+      
+      let results: any[] = [];
+      if (contentType === 'playlist') {
+        results = (searchResults.playlists?.items || []).filter(item => item != null);
+      } else if (contentType === 'album') {
+        results = (searchResults.albums?.items || []).filter(item => item != null);
+      }
+      
+      console.log('Processed results:', results.length, contentType + 's');
+      setItems(results as any);
     } catch (error) {
-      console.error('Error searching playlists:', error);
-      setPlaylists([]);
+      console.error('Error searching items:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
+    fetchItems();
+  }, [fetchItems]);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!showMyPlaylists && searchQuery.trim()) {
+    if (!showMyItems && searchQuery.trim()) {
       performSearch();
     }
   };
 
-  // generate tiles for the playlists
-  const playlistTiles = playlists
-    .filter(playlist => playlist != null) // Filter out null/undefined items
-    .map((playlist) => {
-      const coverImage = playlist.images && playlist.images.length > 0 ? playlist.images[0] : null;
+  // generate tiles for the items
+  const itemTiles = items
+    .filter(item => item != null) // Filter out null/undefined items
+    .map((item: any) => {
+      console.log('Rendering item:', item); // Debug log
+      const coverImage = item.images && item.images.length > 0 ? item.images[0] : null;
+      
+      // Determine metadata based on content type
+      let metadata = '';
+      if (contentType === 'playlist') {
+        metadata = `${item.tracks?.total || 0} tracks`;
+      } else if (contentType === 'album') {
+        console.log('Album artists:', item.artists); // Debug log
+        const artistName = item.artists && item.artists.length > 0 ? item.artists[0].name : 'Unknown Artist';
+        const releaseYear = item.release_date ? item.release_date.slice(0, 4) : '';
+        metadata = `${artistName}${releaseYear ? ' • ' + releaseYear : ''}`;
+      }
       
       return (
-        <div key={playlist.id} className="playlist-tile">
+        <div key={item.id} className="playlist-tile">
           <div className="playlist-image">
             {coverImage ? (
-            <img 
-              src={coverImage.url} 
-              alt={`${playlist.name} cover`}
-              className="cover-image"
-            />
-          ) : (
-            <div className="placeholder-image">♪</div>
-          )}
+              <img 
+                src={coverImage.url} 
+                alt={`${item.name} cover`}
+                className="cover-image"
+              />
+            ) : (
+              <div className="placeholder-image">{contentType === 'playlist' ? '♪' : '♫'}</div>
+            )}
+          </div>
+          <div className="playlist-content">
+            <h3 className="playlist-title">{item.name}</h3>
+            {item.description && (
+              <p className="playlist-description">{item.description}</p>
+            )}
+          </div>
+          <div className="playlist-meta">
+            <span className="track-count">{metadata}</span>
+          </div>
         </div>
-        <div className="playlist-content">
-          <h3 className="playlist-title">{playlist.name}</h3>
-          {playlist.description && (
-            <p className="playlist-description">{playlist.description}</p>
-          )}
-        </div>
-        <div className="playlist-meta">
-          <span className="track-count">{playlist.tracks?.total || 0} tracks</span>
-        </div>
-      </div>
-    );
-  });
-
-  return (
+      );
+    });  return (
     <>
-      <h1>Spotify Playlists</h1>
+      <h1>Spotify Browser</h1>
       
       <div className="controls">
         <label className="toggle-label">
           <input
             type="checkbox"
-            checked={showMyPlaylists}
-            onChange={(e) => setShowMyPlaylists(e.target.checked)}
+            checked={showMyItems}
+            onChange={(e) => setShowMyItems(e.target.checked)}
           />
-          My Playlists
+          My {contentType === 'playlist' ? 'Playlists' : 'Albums'}
         </label>
+
+        <select
+          value={contentType}
+          onChange={(e) => setContentType(e.target.value as ContentType)}
+          className="type-selector"
+        >
+          <option value="playlist">Playlists</option>
+          <option value="album">Albums</option>
+        </select>
 
         <form onSubmit={handleSearch} className="search-form">
           <input
             type="text"
-            placeholder="Search playlists..."
+            placeholder={`Search ${contentType}s...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
-            disabled={showMyPlaylists}
+            disabled={showMyItems}
           />
-          <button type="submit" disabled={showMyPlaylists || !searchQuery.trim()}>
+          <button type="submit" disabled={showMyItems || !searchQuery.trim()}>
             Search
           </button>
         </form>
@@ -140,13 +174,13 @@ function PlaylistDisplay({ sdk }: { sdk: SpotifyApi}) {
         <div className="loading">Loading...</div>
       ) : (
         <div className="playlist-container">
-          {playlistTiles.length > 0 ? (
-            playlistTiles
+          {itemTiles.length > 0 ? (
+            itemTiles
           ) : (
             <div className="no-results">
-              {!showMyPlaylists 
-                ? "No playlists found. Try a different search term." 
-                : "No playlists found."
+              {!showMyItems 
+                ? `No ${contentType}s found. Try a different search term.` 
+                : `No ${contentType}s found.`
               }
             </div>
           )}

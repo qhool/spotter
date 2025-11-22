@@ -31,6 +31,21 @@
   cursor: pointer;
 }
 
+.type-selector {
+  padding: 0.5rem;
+  border: 1px solid #404040;
+  border-radius: 4px;
+  background-color: #2a2a2a;
+  color: #ffffff;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.type-selector:focus {
+  outline: none;
+  border-color: #666666;
+}
+
 .search-form {
   display: flex;
   gap: 0.5rem;
