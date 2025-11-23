@@ -2,34 +2,35 @@ import { useSpotify } from './hooks/useSpotify';
 import { Scopes, SpotifyApi, SimplifiedPlaylist, SimplifiedAlbum } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState, useCallback } from 'react'
 import { ItemTile, ContentType } from './components/ItemTile';
+import { ButtonTile } from './components/ButtonTile';
 import './App.css'
 
 function App() {
-  
   const sdk = useSpotify(
     import.meta.env.VITE_SPOTIFY_CLIENT_ID, 
     import.meta.env.VITE_REDIRECT_TARGET, 
     Scopes.all
-);
+  );
 
-  return sdk
-    ? (<ItemBrowser sdk={sdk} />) 
-    : (<></>);
+  return sdk ? (<ItemBrowser sdk={sdk} />) : (<></>);
 }
 
-function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
+function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   const [items, setItems] = useState<(SimplifiedPlaylist | SimplifiedAlbum)[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMyItems, setShowMyItems] = useState(true);
   const [loading, setLoading] = useState(false);
   const [contentType, setContentType] = useState<ContentType>('playlist');
+  
+  // Pagination state
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       let results: any[] = [];
       if (showMyItems) {
-        // Fetch user's own items
         if (contentType === 'playlist') {
           const userPlaylists = await sdk.currentUser.playlists.playlists();
           results = userPlaylists.items;
@@ -38,8 +39,8 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
           results = savedAlbums.items.map(item => item.album);
         }
         setItems(results);
+        setSearchResults(null); // Clear pagination data for user items
       } else {
-        // In search mode - clear the list and wait for manual search
         setItems([]);
         setLoading(false);
         return;
@@ -52,30 +53,70 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
     }
   }, [sdk, showMyItems, contentType]);
 
-  const performSearch = async () => {
+  const performSearch = async (append = false) => {
     if (!searchQuery.trim()) return;
     
-    console.log('Performing search for:', searchQuery, 'type:', contentType);
-    setLoading(true);
+    console.log('Performing search for:', searchQuery, 'type:', contentType, 'append:', append);
+    
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setItems([]); // Clear previous results for new search
+      setSearchResults(null);
+    }
+    
     try {
-      const searchResults = await sdk.search(searchQuery, [contentType], undefined, 20);
-      console.log('Search results:', searchResults);
-      
-      let results: any[] = [];
-      if (contentType === 'playlist') {
-        results = (searchResults.playlists?.items || []).filter(item => item != null);
-      } else if (contentType === 'album') {
-        results = (searchResults.albums?.items || []).filter(item => item != null);
+      let searchData;
+      if (append && searchResults?.next) {
+        // Use the SDK's getRequest method for pagination
+        searchData = await sdk.search(searchQuery, [contentType], undefined,
+          searchResults.limit,
+          searchResults.offset + searchResults.limit)
+      } else {
+        // Perform new search
+        searchData = await sdk.search(searchQuery, [contentType], undefined, 50);
       }
       
+      console.log('Search results:', searchData);
+      
+      let results: any[] = [];
+      let pageData;
+      
+      if (contentType === 'playlist') {
+        results = (searchData.playlists?.items || []).filter(item => item != null);
+        pageData = searchData.playlists;
+      } else if (contentType === 'album') {
+        results = (searchData.albums?.items || []).filter(item => item != null);
+        pageData = searchData.albums;
+      }
+      
+      if (append) {
+        setItems(prev => [...prev, ...results]);
+      } else {
+        setItems(results);
+      }
+      
+      setSearchResults(pageData);
       console.log('Processed results:', results.length, contentType + 's');
-      setItems(results as any);
+      
     } catch (error) {
       console.error('Error searching items:', error);
-      setItems([]);
+      if (!append) {
+        setItems([]);
+        setSearchResults(null);
+      }
     } finally {
-      setLoading(false);
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
+  };
+
+  const loadMore = () => {
+    performSearch(true);
   };
 
   useEffect(() => {
@@ -85,16 +126,38 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showMyItems && searchQuery.trim()) {
-      performSearch();
+      performSearch(false);
     }
   };
 
+  // Calculate if there are more items to load
+  const hasMoreItems = searchResults && searchResults.next && (searchResults.offset + searchResults.limit < searchResults.total);
+  const remainingItems = searchResults ? Math.max(0, searchResults.total - searchResults.offset - searchResults.limit) : 0;
+
   // generate tiles for the items
   const itemTiles = items
-    .filter(item => item != null) // Filter out null/undefined items
+    .filter(item => item != null)
     .map((item: any) => (
       <ItemTile key={item.id} item={item} contentType={contentType} />
-    ));  return (
+    ));
+
+  // Add load more button if needed
+  if (!showMyItems && hasMoreItems && !loading) {
+    const loadMoreText = loadingMore 
+      ? 'Loading...' 
+      : `Load More (${remainingItems} remaining)`;
+    
+    itemTiles.push(
+      <ButtonTile 
+        key="load-more" 
+        name={loadMoreText}
+        onClick={loadMore}
+        disabled={loadingMore}
+      />
+    );
+  }
+
+  return (
     <>
       <h1>Spotify Browser</h1>
       
@@ -149,7 +212,7 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi}) {
         </div>
       )}
     </>
-  )
+  );
 }
 
 export default App;
