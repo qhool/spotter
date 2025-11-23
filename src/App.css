@@ -138,4 +138,14 @@
   border-radius: 8px;
   background-color: #1a1a1a;
   min-height: 0; /* Important for scrolling */
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.right-panel .playlist-container {
+  border: 2px dashed #404040;
+}
+
+.right-panel:hover .playlist-container {
+  border-color: #1db954;
+  background-color: #1a2a1a;
 }

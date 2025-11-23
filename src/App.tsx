@@ -25,6 +25,12 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   // Pagination state
   const [searchResults, setSearchResults] = useState<any>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  
+  // Selected items state
+  const [selectedItems, setSelectedItems] = useState<(SimplifiedPlaylist | SimplifiedAlbum)[]>([]);
+  
+  // Drag state
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -130,16 +136,60 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
     }
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e: React.DragEvent, item: SimplifiedPlaylist | SimplifiedAlbum) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(item));
+    setDraggedItemId(item.id);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItemId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Allow drop
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    try {
+      const itemData = e.dataTransfer.getData('application/json');
+      const item = JSON.parse(itemData);
+      
+      // Check if item is already in selected list
+      if (!selectedItems.find(selected => selected.id === item.id)) {
+        setSelectedItems(prev => [...prev, item]);
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    } finally {
+      setDraggedItemId(null);
+    }
+  };
+
+  const removeSelectedItem = (itemId: string) => {
+    setSelectedItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
   // Calculate if there are more items to load
   const hasMoreItems = searchResults && searchResults.next && (searchResults.offset + searchResults.limit < searchResults.total);
   const remainingItems = searchResults ? Math.max(0, searchResults.total - searchResults.offset - searchResults.limit) : 0;
 
-  // generate tiles for the items
-  const itemTiles = items
+  // generate tiles for the items (filter out already selected items)
+  const filteredItems = items
     .filter(item => item != null)
-    .map((item: any) => (
-      <ItemTile key={item.id} item={item} contentType={contentType} />
-    ));
+    .filter(item => !selectedItems.find(selected => selected.id === item.id));
+    
+  const itemTiles = filteredItems.map((item: any) => (
+    <ItemTile 
+      key={item.id} 
+      item={item} 
+      contentType={contentType} 
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      isDragging={draggedItemId === item.id}
+    />
+  ));
 
   // Add load more button if needed
   if (!showMyItems && hasMoreItems && !loading) {
@@ -213,11 +263,27 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
           )}
         </div>
 
-        <div className="right-panel">
+        <div 
+          className="right-panel"
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <div className="playlist-container">
-            <div className="no-results">
-              Selected items will appear here
-            </div>
+            {selectedItems.length > 0 ? (
+              selectedItems.map(item => (
+                <ItemTile
+                  key={item.id}
+                  item={item}
+                  contentType={contentType}
+                  showRemoveButton={true}
+                  onRemove={removeSelectedItem}
+                />
+              ))
+            ) : (
+              <div className="no-results">
+                Drag items here to select them
+              </div>
+            )}
           </div>
         </div>
       </div>

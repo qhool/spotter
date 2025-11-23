@@ -5,9 +5,14 @@ export type ContentType = 'playlist' | 'album';
 interface ItemTileProps {
   item: any;
   contentType: ContentType;
+  onDragStart?: (e: React.DragEvent, item: any) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+  showRemoveButton?: boolean;
+  onRemove?: (itemId: string) => void;
 }
 
-export function ItemTile({ item, contentType }: ItemTileProps) {
+export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging = false, showRemoveButton = false, onRemove }: ItemTileProps) {
   console.log('Rendering item:', item); // Debug log
   const coverImage = item.images && item.images.length > 0 ? item.images[0] : null;
   
@@ -29,7 +34,21 @@ export function ItemTile({ item, contentType }: ItemTileProps) {
   }
   
   return (
-    <div className="item-tile">
+    <div 
+      className={`item-tile ${isDragging ? 'dragging' : ''}`}
+      draggable={!!onDragStart}
+      onDragStart={onDragStart ? (e) => onDragStart(e, item) : undefined}
+      onDragEnd={onDragEnd}
+    >
+      {showRemoveButton && (
+        <button 
+          className="remove-button"
+          onClick={() => onRemove?.(item.id)}
+          aria-label="Remove item"
+        >
+          ×
+        </button>
+      )}
       <div className="item-image">
         {coverImage ? (
           <img 
