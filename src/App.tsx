@@ -158,60 +158,70 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   }
 
   return (
-    <>
-      <h1>Spotify Browser</h1>
-      
-      <div className="controls">
-        <label className="toggle-label">
-          <input
-            type="checkbox"
-            checked={showMyItems}
-            onChange={(e) => setShowMyItems(e.target.checked)}
-          />
-          My {contentType === 'playlist' ? 'Playlists' : 'Albums'}
-        </label>
+    <div className="app-container">
+      <div className="content-area">
+        <div className="left-panel">
+          <div className="controls">
+            <label className="toggle-label">
+              <input
+                type="checkbox"
+                checked={showMyItems}
+                onChange={(e) => setShowMyItems(e.target.checked)}
+              />
+              My {contentType === 'playlist' ? 'Playlists' : 'Albums'}
+            </label>
 
-        <select
-          value={contentType}
-          onChange={(e) => setContentType(e.target.value as ContentType)}
-          className="type-selector"
-        >
-          <option value="playlist">Playlists</option>
-          <option value="album">Albums</option>
-        </select>
+            <select
+              value={contentType}
+              onChange={(e) => setContentType(e.target.value as ContentType)}
+              className="type-selector"
+            >
+              <option value="playlist">Playlists</option>
+              <option value="album">Albums</option>
+            </select>
 
-        <form onSubmit={handleSearch} className="search-form">
-          <input
-            type="text"
-            placeholder={`Search ${contentType}s...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-            disabled={showMyItems}
-          />
-          <button type="submit" disabled={showMyItems || !searchQuery.trim()}>
-            Search
-          </button>
-        </form>
-      </div>
+            <form onSubmit={handleSearch} className="search-form">
+              <input
+                type="text"
+                placeholder={`Search ${contentType}s...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+                disabled={showMyItems}
+              />
+              <button type="submit" disabled={showMyItems || !searchQuery.trim()}>
+                Search
+              </button>
+            </form>
+          </div>
 
-      {loading ? (
-        <div className="loading">Loading...</div>
-      ) : (
-        <div className="playlist-container">
-          {itemTiles.length > 0 ? (
-            itemTiles
+          {loading ? (
+            <div className="loading">Loading...</div>
           ) : (
-            <div className="no-results">
-              {!showMyItems 
-                ? `No ${contentType}s found. Try a different search term.` 
-                : `No ${contentType}s found.`
-              }
+            <div className="playlist-container">
+              {itemTiles.length > 0 ? (
+                itemTiles
+              ) : (
+                <div className="no-results">
+                  {!showMyItems 
+                    ? `No ${contentType}s found. Try a different search term.` 
+                    : `No ${contentType}s found.`
+                  }
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-    </>
+
+        <div className="right-panel">
+          <div className="playlist-container">
+            <div className="no-results">
+              Selected items will appear here
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
