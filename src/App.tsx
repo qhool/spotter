@@ -3,6 +3,7 @@ import { Scopes, SpotifyApi, SimplifiedPlaylist, SimplifiedAlbum } from '@spotif
 import { useEffect, useState, useCallback } from 'react'
 import { ItemTile, ContentType } from './components/ItemTile';
 import { ButtonTile } from './components/ButtonTile';
+import { PlaceholderTile } from './components/PlaceholderTile';
 import './App.css'
 
 function App() {
@@ -31,6 +32,7 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   
   // Drag state
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -144,10 +146,33 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
 
   const handleDragEnd = () => {
     setDraggedItemId(null);
+    setDragOverIndex(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault(); // Allow drop
+    
+    // Calculate drop position based on mouse position
+    const container = e.currentTarget as HTMLElement;
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    
+    // Find all item tiles in the container
+    const items = container.querySelectorAll('.item-tile:not(.dragging)');
+    let insertIndex = selectedItems.length; // Default to end
+    
+    for (let i = 0; i < items.length; i++) {
+      const itemRect = items[i].getBoundingClientRect();
+      const itemY = itemRect.top - rect.top;
+      const itemMiddle = itemY + itemRect.height / 2;
+      
+      if (y < itemMiddle) {
+        insertIndex = i;
+        break;
+      }
+    }
+    
+    setDragOverIndex(insertIndex);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -156,19 +181,63 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
       const itemData = e.dataTransfer.getData('application/json');
       const item = JSON.parse(itemData);
       
-      // Check if item is already in selected list
-      if (!selectedItems.find(selected => selected.id === item.id)) {
-        setSelectedItems(prev => [...prev, item]);
+      const existingIndex = selectedItems.findIndex(selected => selected.id === item.id);
+      const insertIndex = dragOverIndex ?? selectedItems.length;
+      
+      if (existingIndex !== -1) {
+        // Item is already in selected list - reorder it
+        setSelectedItems(prev => {
+          const newItems = [...prev];
+          // Remove from old position
+          newItems.splice(existingIndex, 1);
+          // Insert at new position (adjust index if removing from before insertion point)
+          const adjustedIndex = existingIndex < insertIndex ? insertIndex - 1 : insertIndex;
+          newItems.splice(adjustedIndex, 0, item);
+          return newItems;
+        });
+      } else {
+        // New item - add to selected list
+        setSelectedItems(prev => {
+          const newItems = [...prev];
+          newItems.splice(insertIndex, 0, item);
+          return newItems;
+        });
       }
     } catch (error) {
       console.error('Error handling drop:', error);
     } finally {
       setDraggedItemId(null);
+      setDragOverIndex(null);
     }
   };
 
   const removeSelectedItem = (itemId: string) => {
     setSelectedItems(prev => prev.filter(item => item.id !== itemId));
+  };
+
+  // Left panel drop handlers (for removing from selected list)
+  const handleLeftPanelDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Allow drop
+  };
+
+  const handleLeftPanelDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    try {
+      const itemData = e.dataTransfer.getData('application/json');
+      const item = JSON.parse(itemData);
+      
+      // Check if item is in selected list
+      const selectedIndex = selectedItems.findIndex(selected => selected.id === item.id);
+      if (selectedIndex !== -1) {
+        // Remove from selected list
+        setSelectedItems(prev => prev.filter(selected => selected.id !== item.id));
+      }
+    } catch (error) {
+      console.error('Error handling left panel drop:', error);
+    } finally {
+      setDraggedItemId(null);
+      setDragOverIndex(null);
+    }
   };
 
   // Calculate if there are more items to load
@@ -210,7 +279,11 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   return (
     <div className="app-container">
       <div className="content-area">
-        <div className="left-panel">
+        <div 
+          className="left-panel"
+          onDragOver={handleLeftPanelDragOver}
+          onDrop={handleLeftPanelDrop}
+        >
           <div className="controls">
             <label className="toggle-label">
               <input
@@ -269,16 +342,36 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
           onDrop={handleDrop}
         >
           <div className="playlist-container">
-            {selectedItems.length > 0 ? (
-              selectedItems.map(item => (
-                <ItemTile
-                  key={item.id}
-                  item={item}
-                  contentType={contentType}
-                  showRemoveButton={true}
-                  onRemove={removeSelectedItem}
-                />
-              ))
+            {selectedItems.length > 0 || dragOverIndex !== null ? (
+              (() => {
+                const tiles = [];
+                
+                for (let i = 0; i <= selectedItems.length; i++) {
+                  // Insert placeholder at dragOverIndex
+                  if (dragOverIndex === i && draggedItemId !== null) {
+                    tiles.push(<PlaceholderTile key={`placeholder-${i}`} />);
+                  }
+                  
+                  // Insert actual item if it exists at this index
+                  if (i < selectedItems.length) {
+                    const item = selectedItems[i];
+                    tiles.push(
+                      <ItemTile
+                        key={item.id}
+                        item={item}
+                        contentType={contentType}
+                        showRemoveButton={true}
+                        onRemove={removeSelectedItem}
+                        onDragStart={handleDragStart}
+                        onDragEnd={handleDragEnd}
+                        isDragging={draggedItemId === item.id}
+                      />
+                    );
+                  }
+                }
+                
+                return tiles;
+              })()
             ) : (
               <div className="no-results">
                 Drag items here to select them

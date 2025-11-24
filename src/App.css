@@ -149,3 +149,7 @@
   border-color: #1db954;
   background-color: #1a2a1a;
 }
+
+.left-panel .playlist-container {
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
