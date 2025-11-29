@@ -33,11 +33,8 @@ export class PlaylistContainer extends TrackContainer {
   public coverImage?: { url: string; width?: number; height?: number };
   public type: 'playlist' | 'album' | 'liked-songs' = 'playlist';
 
-  private playlist: SimplifiedPlaylist;
-
   constructor(sdk: SpotifyApi, playlist: SimplifiedPlaylist) {
     super(sdk);
-    this.playlist = playlist;
     this.id = playlist.id;
     this.name = playlist.name;
     this.description = playlist.description || undefined;
