@@ -1,9 +1,10 @@
 import { useSpotify } from './hooks/useSpotify';
-import { Scopes, SpotifyApi, SimplifiedPlaylist, SimplifiedAlbum } from '@spotify/web-api-ts-sdk';
+import { Scopes, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState, useCallback } from 'react'
 import { ItemTile, ContentType } from './components/ItemTile';
 import { ButtonTile } from './components/ButtonTile';
 import { PlaceholderTile } from './components/PlaceholderTile';
+import { LikedSongsContainer, PlaylistContainer, AlbumContainer, TrackContainer } from './data/TrackContainer';
 import './App.css'
 
 function App() {
@@ -17,7 +18,7 @@ function App() {
 }
 
 function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
-  const [items, setItems] = useState<(SimplifiedPlaylist | SimplifiedAlbum)[]>([]);
+  const [items, setItems] = useState<TrackContainer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMyItems, setShowMyItems] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   const [loadingMore, setLoadingMore] = useState(false);
   
   // Selected items state
-  const [selectedItems, setSelectedItems] = useState<(SimplifiedPlaylist | SimplifiedAlbum)[]>([]);
+  const [selectedItems, setSelectedItems] = useState<TrackContainer[]>([]);
   
   // Drag state
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
@@ -37,14 +38,26 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      let results: any[] = [];
+      let results: TrackContainer[] = [];
       if (showMyItems) {
         if (contentType === 'playlist') {
+          // Get user's saved tracks count for liked songs
+          const savedTracksResponse = await sdk.currentUser.tracks.savedTracks(1, 0);
+          const likedSongsContainer = new LikedSongsContainer(sdk, savedTracksResponse.total);
+          
+          // Get user playlists and wrap them in PlaylistContainer
           const userPlaylists = await sdk.currentUser.playlists.playlists();
-          results = userPlaylists.items;
+          const playlistContainers = userPlaylists.items.map(playlist => 
+            new PlaylistContainer(sdk, playlist)
+          );
+          
+          // Add liked songs as first item, then playlists
+          results = [likedSongsContainer, ...playlistContainers];
         } else if (contentType === 'album') {
           const savedAlbums = await sdk.currentUser.albums.savedAlbums();
-          results = savedAlbums.items.map(item => item.album);
+          results = savedAlbums.items.map(savedAlbum => 
+            new AlbumContainer(sdk, savedAlbum.album as any) // Cast since Album and SimplifiedAlbum are compatible for our use
+          );
         }
         setItems(results);
         setSearchResults(null); // Clear pagination data for user items
@@ -88,14 +101,16 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
       
       console.log('Search results:', searchData);
       
-      let results: any[] = [];
+      let results: TrackContainer[] = [];
       let pageData;
       
       if (contentType === 'playlist') {
-        results = (searchData.playlists?.items || []).filter(item => item != null);
+        const rawPlaylists = (searchData.playlists?.items || []).filter(item => item != null);
+        results = rawPlaylists.map(playlist => new PlaylistContainer(sdk, playlist as any)); // Cast for compatibility
         pageData = searchData.playlists;
       } else if (contentType === 'album') {
-        results = (searchData.albums?.items || []).filter(item => item != null);
+        const rawAlbums = (searchData.albums?.items || []).filter(item => item != null);
+        results = rawAlbums.map(album => new AlbumContainer(sdk, album));
         pageData = searchData.albums;
       }
       
@@ -139,8 +154,8 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   };
 
   // Drag and Drop handlers
-  const handleDragStart = (e: React.DragEvent, item: SimplifiedPlaylist | SimplifiedAlbum) => {
-    e.dataTransfer.setData('application/json', JSON.stringify(item));
+  const handleDragStart = (e: React.DragEvent, item: TrackContainer) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({ id: item.id }));
     setDraggedItemId(item.id);
   };
 
@@ -178,8 +193,15 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     try {
-      const itemData = e.dataTransfer.getData('application/json');
-      const item = JSON.parse(itemData);
+      const dragData = e.dataTransfer.getData('application/json');
+      const { id } = JSON.parse(dragData);
+      
+      // Find the actual TrackContainer object by ID
+      const item = items.find(item => item.id === id);
+      if (!item) {
+        console.error('Could not find item with id:', id);
+        return;
+      }
       
       const existingIndex = selectedItems.findIndex(selected => selected.id === item.id);
       const insertIndex = dragOverIndex ?? selectedItems.length;
@@ -223,14 +245,14 @@ function ItemBrowser({ sdk }: { sdk: SpotifyApi }) {
   const handleLeftPanelDrop = (e: React.DragEvent) => {
     e.preventDefault();
     try {
-      const itemData = e.dataTransfer.getData('application/json');
-      const item = JSON.parse(itemData);
+      const dragData = e.dataTransfer.getData('application/json');
+      const { id } = JSON.parse(dragData);
       
       // Check if item is in selected list
-      const selectedIndex = selectedItems.findIndex(selected => selected.id === item.id);
+      const selectedIndex = selectedItems.findIndex(selected => selected.id === id);
       if (selectedIndex !== -1) {
         // Remove from selected list
-        setSelectedItems(prev => prev.filter(selected => selected.id !== item.id));
+        setSelectedItems(prev => prev.filter(selected => selected.id !== id));
       }
     } catch (error) {
       console.error('Error handling left panel drop:', error);
