@@ -17,15 +17,28 @@ interface DragReorderContainerProps<T> {
 export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, className = '' }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [dropOccurred, setDropOccurred] = useState<boolean>(false);
 
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ id: itemId }));
     setDraggedItemId(itemId);
+    setDropOccurred(false); // Reset flag at start of drag
   };
 
   const handleDragEnd = () => {
+    // If no drop occurred inside the container, delete the item
+    if (draggedItemId && !dropOccurred) {
+      const currentIndex = items.findIndex(item => getItemId(item) === draggedItemId);
+      if (currentIndex !== -1) {
+        const newItems = [...items];
+        newItems.splice(currentIndex, 1);
+        setItems(newItems);
+      }
+    }
+    
     setDraggedItemId(null);
     setDragOverIndex(null);
+    setDropOccurred(false);
   };
 
   const handleItemDragOver = (e: React.DragEvent, index: number) => {
@@ -44,16 +57,13 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     setDragOverIndex(insertIndex);
   };
 
-  const handleContainerDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setDropOccurred(true); // Mark that a drop occurred inside the container
     
     try {
       const dragData = e.dataTransfer.getData('application/json');
@@ -79,10 +89,8 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       setItems(newItems);
     } catch (error) {
       console.error('Error handling drop:', error);
-    } finally {
-      setDraggedItemId(null);
-      setDragOverIndex(null);
     }
+    // Note: Don't reset state here - let dragEnd handle it
   };
 
   return (
