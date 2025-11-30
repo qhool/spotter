@@ -11,13 +11,15 @@ interface DragReorderContainerProps<T> {
   setItems: (items: T[]) => void;
   getItemId: (item: T) => string;
   renderItem: (item: T) => ReactNode;
+  getDragItem?: (dragData: any) => T | null;
   className?: string;
 }
 
-export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, className = '' }: DragReorderContainerProps<T>) {
+export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, getDragItem, className = '' }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropOccurred, setDropOccurred] = useState<boolean>(false);
+  const [isDragActive, setIsDragActive] = useState<boolean>(false);
 
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ id: itemId }));
@@ -39,12 +41,29 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     setDraggedItemId(null);
     setDragOverIndex(null);
     setDropOccurred(false);
+    setIsDragActive(false);
+  };
+
+  const handleContainerDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragActive(true);
+  };
+
+  const handleContainerDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Only clear if we're actually leaving the container (not entering a child)
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDragActive(false);
+      setDragOverIndex(null);
+    }
   };
 
   const handleItemDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    
-    if (!draggedItemId) return;
     
     // Get the relative Y position within the item
     const rect = e.currentTarget.getBoundingClientRect();
@@ -66,9 +85,34 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     setDropOccurred(true); // Mark that a drop occurred inside the container
     
     try {
-      const dragData = e.dataTransfer.getData('application/json');
-      const { id } = JSON.parse(dragData);
+      const dragDataText = e.dataTransfer.getData('application/json');
       
+      // If no internal drag is happening, check for external drag-in
+      if (!draggedItemId && getDragItem) {
+        let dragData;
+        try {
+          dragData = JSON.parse(dragDataText);
+        } catch {
+          // If JSON parsing fails, use the raw text or other data types
+          dragData = dragDataText || e.dataTransfer.getData('text/plain');
+        }
+        
+        if (dragData) {
+          const newItem = getDragItem(dragData);
+          if (newItem) {
+            const insertIndex = dragOverIndex ?? items.length;
+            const newItems = [...items];
+            newItems.splice(insertIndex, 0, newItem);
+            setItems(newItems);
+            return;
+          }
+        }
+      }
+      
+      // Handle internal reordering
+      if (!dragDataText) return;
+      
+      const { id } = JSON.parse(dragDataText);
       const draggedItem = items.find(item => getItemId(item) === id);
       if (!draggedItem) return;
       
@@ -97,6 +141,8 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     <div 
       className={`drag-reorder-container ${className}`}
       onDragOver={handleDragOver}
+      onDragEnter={handleContainerDragEnter}
+      onDragLeave={handleContainerDragLeave}
       onDrop={handleDrop}
     >
       {items.map((item, index) => {
@@ -105,7 +151,7 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
         return (
           <div key={getItemId(item)}>
             {/* Insert drop indicator */}
-            {dragOverIndex === index && draggedItemId && (
+            {dragOverIndex === index && isDragActive && (
               <div className="drop-indicator">
                 <div className="drop-line" />
               </div>
@@ -126,7 +172,7 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       })}
       
       {/* Drop indicator at end */}
-      {dragOverIndex === items.length && draggedItemId && (
+      {dragOverIndex === items.length && isDragActive && (
         <div className="drop-indicator">
           <div className="drop-line" />
         </div>

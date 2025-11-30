@@ -30,8 +30,43 @@ export function TestbedPage({}: TestbedPageProps) {
     setItems([]);
   };
 
+  const handleDragItem = (dragData: any): TestbedItem | null => {
+    // Handle external drag data - check if it's a new item
+    if (dragData && dragData.type === 'external-item') {
+      return {
+        id: `external-${Date.now()}`, // Generate unique ID
+        text: dragData.text || 'Dragged Item'
+      };
+    }
+    return null;
+  };
+
   return (
     <div className="testbed-container">
+      {/* Example external drag source */}
+      <div style={{ marginBottom: '1rem' }}>
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.dataTransfer.setData('application/json', JSON.stringify({
+              type: 'external-item',
+              text: 'New Item from Outside'
+            }));
+          }}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'grab',
+            display: 'inline-block',
+            marginBottom: '1rem'
+          }}
+        >
+          Drag me into the list!
+        </div>
+      </div>
+      
       <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
         <button 
           onClick={handleReset}
@@ -65,6 +100,7 @@ export function TestbedPage({}: TestbedPageProps) {
         setItems={setItems}
         getItemId={(item) => item.id}
         renderItem={(item) => <PlaceholderTile text={item.text} />}
+        getDragItem={handleDragItem}
         className="testbed-drag-container"
       />
     </div>
