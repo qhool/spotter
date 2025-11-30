@@ -1,7 +1,6 @@
 .drag-reorder-container {
   max-height: 400px;
   overflow-y: auto;
-  padding: 1rem;
   border: 2px solid #333;
   border-radius: 8px;
   background-color: #1a1a1a;
@@ -10,11 +9,14 @@
 
 .drag-item {
   display: block;
+  width: 100%;
   background-color: #2a2a2a;
   border: 1px solid #404040;
-  border-radius: 6px;
   transition: all 0.2s ease;
   cursor: move;
+  margin: 0;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .drag-item:hover {
@@ -31,14 +33,15 @@
 
 .drop-indicator {
   height: 4px;
-  margin: 2px 0;
+  margin: 0;
   position: relative;
+  width: 100%;
 }
 
 .drop-line {
   height: 2px;
+  width: 100%;
   background-color: #1db954;
-  border-radius: 1px;
   box-shadow: 0 0 4px rgba(29, 185, 84, 0.5);
   animation: pulse 1s ease-in-out infinite;
 }
