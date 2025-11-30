@@ -1,4 +1,4 @@
-import { useState, ReactNode, forwardRef, useImperativeHandle } from 'react';
+import { useState, ReactNode, forwardRef, useImperativeHandle, useEffect } from 'react';
 import './DragReorderContainer.css';
 
 export interface DragReorderItem {
@@ -8,7 +8,7 @@ export interface DragReorderItem {
 
 interface DragReorderContainerProps {
   items: DragReorderItem[];
-  onReorder?: (newOrder: DragReorderItem[]) => void;
+  setItems: (items: DragReorderItem[]) => void;
   className?: string;
 }
 
@@ -16,24 +16,11 @@ export interface DragReorderContainerRef {
   clearItems: () => void;
 }
 
-export const DragReorderContainer = forwardRef<DragReorderContainerRef, DragReorderContainerProps>(
-  ({ items: initialItems, onReorder, className = '' }, ref) => {
-  const [items, setItems] = useState<DragReorderItem[]>(initialItems);
+export function DragReorderContainer({ items, setItems, className = '' }: DragReorderContainerProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [hoveredItemIndexes, setHoveredItemIndexes] = useState<Set<number>>(new Set());
   const [dragCoordinates, setDragCoordinates] = useState<{[key: number]: {x: number, y: number}}>({})
-
-  useImperativeHandle(ref, () => ({
-    clearItems: () => {
-      setItems([]);
-      setDraggedItemId(null);
-      setDragOverIndex(null);
-      setHoveredItemIndexes(new Set());
-      setDragCoordinates({});
-      onReorder?.([]);
-    }
-  }), [onReorder]);
 
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ id: itemId }));
@@ -162,7 +149,6 @@ export const DragReorderContainer = forwardRef<DragReorderContainerRef, DragReor
       newItems.splice(adjustedIndex, 0, draggedItem);
       
       setItems(newItems);
-      onReorder?.(newItems);
     } catch (error) {
       console.error('Error handling drop:', error);
     } finally {
@@ -234,4 +220,4 @@ export const DragReorderContainer = forwardRef<DragReorderContainerRef, DragReor
       </div>
     </div>
   );
-});
+};

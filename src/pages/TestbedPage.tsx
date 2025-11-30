@@ -15,21 +15,15 @@ const createInitialItems = (): DragReorderItem[] =>
 
 export function TestbedPage({}: TestbedPageProps) {
   const [items, setItems] = useState<DragReorderItem[]>(createInitialItems);
-  const dragContainerRef = useRef<DragReorderContainerRef>(null);
 
-  const handleReorder = (newOrder: DragReorderItem[]) => {
-    console.log('Items reordered:', newOrder.map(item => item.id));
-    setItems(newOrder);
-  };
 
   const handleReset = () => {
     const initialItems = createInitialItems();
     setItems(initialItems);
-    handleReorder(initialItems);
   };
 
   const handleClearAll = () => {
-    dragContainerRef.current?.clearItems();
+    setItems([]);
   };
 
   return (
@@ -63,9 +57,8 @@ export function TestbedPage({}: TestbedPageProps) {
         </button>
       </div>
       <DragReorderContainer 
-        ref={dragContainerRef}
         items={items}
-        onReorder={handleReorder}
+        setItems={setItems}
         className="testbed-drag-container"
       />
     </div>
