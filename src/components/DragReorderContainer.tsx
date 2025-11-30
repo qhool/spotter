@@ -6,9 +6,11 @@ export interface DragReorderItem {
   content: ReactNode;
 }
 
-interface DragReorderContainerProps {
-  items: DragReorderItem[];
-  setItems: (items: DragReorderItem[]) => void;
+interface DragReorderContainerProps<T> {
+  items: T[];
+  setItems: (items: T[]) => void;
+  getItemId: (item: T) => string;
+  renderItem: (item: T) => ReactNode;
   className?: string;
 }
 
@@ -16,7 +18,7 @@ export interface DragReorderContainerRef {
   clearItems: () => void;
 }
 
-export function DragReorderContainer({ items, setItems, className = '' }: DragReorderContainerProps) {
+export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, className = '' }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [hoveredItemIndexes, setHoveredItemIndexes] = useState<Set<number>>(new Set());
@@ -36,7 +38,7 @@ export function DragReorderContainer({ items, setItems, className = '' }: DragRe
 
   const handleItemDragEnter = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    if (draggedItemId && items[index].id !== draggedItemId) {
+    if (draggedItemId && getItemId(items[index]) !== draggedItemId) {
       const rect = e.currentTarget.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
@@ -105,10 +107,10 @@ export function DragReorderContainer({ items, setItems, className = '' }: DragRe
       const dragData = e.dataTransfer.getData('application/json');
       const { id } = JSON.parse(dragData);
       
-      const draggedItem = items.find(item => item.id === id);
+      const draggedItem = items.find(item => getItemId(item) === id);
       if (!draggedItem) return;
       
-      const currentIndex = items.findIndex(item => item.id === id);
+      const currentIndex = items.findIndex(item => getItemId(item) === id);
       
       // Determine drop position based on hovered items and their coordinates
       let newIndex = items.length; // Default to end
@@ -167,10 +169,10 @@ export function DragReorderContainer({ items, setItems, className = '' }: DragRe
         onDrop={handleDrop}
       >
         {items.map((item, index) => {
-          const isDragging = draggedItemId === item.id;
+          const isDragging = draggedItemId === getItemId(item);
           
           return (
-            <div key={item.id}>
+            <div key={getItemId(item)}>
               {/* Insert drop indicator */}
               {dragOverIndex === index && draggedItemId && (
                 <div className="drop-indicator">
@@ -182,12 +184,12 @@ export function DragReorderContainer({ items, setItems, className = '' }: DragRe
               <div
                 className={`drag-item ${isDragging ? 'dragging' : ''}`}
                 draggable
-                onDragStart={(e) => handleDragStart(e, item.id)}
+                onDragStart={(e) => handleDragStart(e, getItemId(item))}
                 onDragEnd={handleDragEnd}
                 onDragEnter={(e) => handleItemDragEnter(e, index)}
                 onDragLeave={(e) => handleItemDragLeave(e, index)}
               >
-                {item.content}
+                {renderItem(item)}
               </div>
             </div>
           );

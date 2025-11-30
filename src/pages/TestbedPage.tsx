@@ -1,21 +1,25 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState, useRef } from 'react';
-import { DragReorderContainer, DragReorderContainerRef, DragReorderItem } from '../components/DragReorderContainer';
+import { DragReorderContainer, DragReorderContainerRef } from '../components/DragReorderContainer';
 import { PlaceholderTile } from '../components/PlaceholderTile';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
 }
 
-const createInitialItems = (): DragReorderItem[] => 
+interface TestbedItem {
+  id: string;
+  text: string;
+}
+
+const createInitialItems = (): TestbedItem[] => 
   Array.from({ length: 9 }, (_, i) => ({
     id: `item-${i + 1}`,
-    content: <PlaceholderTile text={`Item ${i + 1}`} />
+    text: `Item ${i + 1}`
   }));
 
 export function TestbedPage({}: TestbedPageProps) {
-  const [items, setItems] = useState<DragReorderItem[]>(createInitialItems);
-
+  const [items, setItems] = useState<TestbedItem[]>(createInitialItems);
 
   const handleReset = () => {
     const initialItems = createInitialItems();
@@ -59,6 +63,8 @@ export function TestbedPage({}: TestbedPageProps) {
       <DragReorderContainer 
         items={items}
         setItems={setItems}
+        getItemId={(item) => item.id}
+        renderItem={(item) => <PlaceholderTile text={item.text} />}
         className="testbed-drag-container"
       />
     </div>
