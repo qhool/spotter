@@ -32,33 +32,28 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     setDragOverIndex(null);
   };
 
-  // Shared logic to determine drop destination based on cursor position
-  const getDropDestination = (e: React.DragEvent): number => {
-    const container = e.currentTarget as HTMLElement;
-    const rect = container.getBoundingClientRect();
-    const y = e.clientY - rect.top;
+  const handleItemDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
     
-    // Find all draggable items in the container
-    const draggableItems = container.querySelectorAll('.drag-item:not(.dragging)');
+    if (!draggedItemId) return;
     
-    for (let i = 0; i < draggableItems.length; i++) {
-      const itemRect = draggableItems[i].getBoundingClientRect();
-      const itemY = itemRect.top - rect.top;
-      const itemMiddle = itemY + itemRect.height / 2;
-      
-      if (y < itemMiddle) {
-        return i;
-      }
-    }
+    // Get the relative Y position within the item
+    const rect = e.currentTarget.getBoundingClientRect();
+    const centerY = rect.top + rect.height / 2;
+    const relativeY = e.clientY - centerY;
     
-    // If we get here, cursor is below all items - insert at end
-    return items.length;
+    // If cursor is above center, insert before (at index)
+    // If cursor is below center, insert after (at index + 1)
+    const insertIndex = relativeY < 0 ? index : index + 1;
+    setDragOverIndex(insertIndex);
+  };
+
+  const handleContainerDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    const insertIndex = getDropDestination(e);
-    setDragOverIndex(insertIndex);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -72,7 +67,7 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       if (!draggedItem) return;
       
       const currentIndex = items.findIndex(item => getItemId(item) === id);
-      const newIndex = getDropDestination(e);
+      const newIndex = dragOverIndex ?? items.length;
       
       if (currentIndex === newIndex || (newIndex > currentIndex && newIndex === currentIndex + 1)) {
         return; // No change needed
@@ -118,6 +113,7 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
               draggable
               onDragStart={(e) => handleDragStart(e, getItemId(item))}
               onDragEnd={handleDragEnd}
+              onDragOver={(e) => handleItemDragOver(e, index)}
             >
               {renderItem(item)}
             </div>
