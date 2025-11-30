@@ -220,3 +220,19 @@
 .left-panel .playlist-container {
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
+
+/* Testbed styles */
+.testbed-drag-container {
+  max-width: 600px;
+  margin-top: 1rem;
+}
+
+.testbed-container h2 {
+  color: #1db954;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.testbed-container p {
+  margin-bottom: 1rem;
+}
