@@ -21,8 +21,6 @@ export interface DragReorderContainerRef {
 export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, className = '' }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [hoveredItemIndexes, setHoveredItemIndexes] = useState<Set<number>>(new Set());
-  const [dragCoordinates, setDragCoordinates] = useState<{[key: number]: {x: number, y: number}}>({})
 
   const handleDragStart = (e: React.DragEvent, itemId: string) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ id: itemId }));
@@ -32,59 +30,16 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
   const handleDragEnd = () => {
     setDraggedItemId(null);
     setDragOverIndex(null);
-    setHoveredItemIndexes(new Set());
-    setDragCoordinates({});
   };
 
-  const handleItemDragEnter = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedItemId && getItemId(items[index]) !== draggedItemId) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const relativeX = e.clientX - centerX;
-      const relativeY = e.clientY - centerY;
-      
-      setHoveredItemIndexes(prev => new Set([...prev, index]));
-      setDragCoordinates(prev => ({
-        ...prev,
-        [index]: { x: relativeX, y: relativeY }
-      }));
-    }
-  };
-
-  const handleItemDragLeave = (e: React.DragEvent, index: number) => {
-    // Only process if we're actually leaving the item (not entering a child element)
-    const relatedTarget = e.relatedTarget as HTMLElement;
-    const currentTarget = e.currentTarget as HTMLElement;
-    
-    if (relatedTarget && currentTarget.contains(relatedTarget)) {
-      return; // Still inside the item
-    }
-    
-    setHoveredItemIndexes(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(index);
-      return newSet;
-    });
-    
-    setDragCoordinates(prev => {
-      const newCoords = { ...prev };
-      delete newCoords[index];
-      return newCoords;
-    });
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    
+  // Shared logic to determine drop destination based on cursor position
+  const getDropDestination = (e: React.DragEvent): number => {
     const container = e.currentTarget as HTMLElement;
     const rect = container.getBoundingClientRect();
     const y = e.clientY - rect.top;
     
     // Find all draggable items in the container
     const draggableItems = container.querySelectorAll('.drag-item:not(.dragging)');
-    let insertIndex = items.length;
     
     for (let i = 0; i < draggableItems.length; i++) {
       const itemRect = draggableItems[i].getBoundingClientRect();
@@ -92,11 +47,17 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       const itemMiddle = itemY + itemRect.height / 2;
       
       if (y < itemMiddle) {
-        insertIndex = i;
-        break;
+        return i;
       }
     }
     
+    // If we get here, cursor is below all items - insert at end
+    return items.length;
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    const insertIndex = getDropDestination(e);
     setDragOverIndex(insertIndex);
   };
 
@@ -111,33 +72,7 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       if (!draggedItem) return;
       
       const currentIndex = items.findIndex(item => getItemId(item) === id);
-      
-      // Determine drop position based on hovered items and their coordinates
-      let newIndex = items.length; // Default to end
-      
-      if (hoveredItemIndexes.size > 0) {
-        // Get the hovered item with coordinates
-        const hoveredIndexes = Array.from(hoveredItemIndexes);
-        
-        // Find the primary hovered item (could be multiple due to overlapping events)
-        // Use the one with the most recent coordinates
-        const primaryIndex = hoveredIndexes.find(index => dragCoordinates[index]);
-        
-        if (primaryIndex !== undefined && dragCoordinates[primaryIndex]) {
-          const coords = dragCoordinates[primaryIndex];
-          
-          // If y < 0, cursor is above center, insert before
-          // If y >= 0, cursor is below center, insert after
-          if (coords.y < 0) {
-            newIndex = primaryIndex;
-          } else {
-            newIndex = primaryIndex + 1;
-          }
-        } else {
-          // Fallback to first hovered item
-          newIndex = Math.min(...hoveredIndexes);
-        }
-      }
+      const newIndex = getDropDestination(e);
       
       if (currentIndex === newIndex || (newIndex > currentIndex && newIndex === currentIndex + 1)) {
         return; // No change needed
@@ -156,8 +91,6 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     } finally {
       setDraggedItemId(null);
       setDragOverIndex(null);
-      setHoveredItemIndexes(new Set());
-      setDragCoordinates({});
     }
   };
 
@@ -186,8 +119,6 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
                 draggable
                 onDragStart={(e) => handleDragStart(e, getItemId(item))}
                 onDragEnd={handleDragEnd}
-                onDragEnter={(e) => handleItemDragEnter(e, index)}
-                onDragLeave={(e) => handleItemDragLeave(e, index)}
               >
                 {renderItem(item)}
               </div>
@@ -205,19 +136,11 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       
       {/* Debug text box */}
       <div className="debug-box">
-        <h4>Hovered Items & Coordinates</h4>
+        <h4>Drag State</h4>
         <div className="debug-content">
-          {hoveredItemIndexes.size === 0 
-            ? 'None' 
-            : Array.from(hoveredItemIndexes).sort().map(index => {
-                const coords = dragCoordinates[index];
-                return (
-                  <div key={index}>
-                    Item {index}: {coords ? `(${coords.x.toFixed(1)}, ${coords.y.toFixed(1)})` : 'No coords'}
-                  </div>
-                );
-              })
-          }
+          <div>Dragging: {draggedItemId || 'None'}</div>
+          <div>Drop Index: {dragOverIndex ?? 'None'}</div>
+          <div>Total Items: {items.length}</div>
         </div>
       </div>
     </div>
