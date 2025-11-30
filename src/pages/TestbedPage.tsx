@@ -1,6 +1,6 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useState, useRef } from 'react';
-import { DragReorderContainer, DragReorderContainerRef } from '../components/DragReorderContainer';
+import { useState } from 'react';
+import { DragReorderContainer } from '../components/DragReorderContainer';
 import { PlaceholderTile } from '../components/PlaceholderTile';
 
 interface TestbedPageProps {

@@ -11,17 +11,15 @@
   display: block;
   width: 100%;
   background-color: #2a2a2a;
-  border: 1px solid #404040;
   transition: all 0.2s ease;
   cursor: move;
   margin: 0;
-  padding: 1rem;
+  padding: 0.33rem;
   box-sizing: border-box;
 }
 
 .drag-item:hover {
   background-color: #333333;
-  border-color: #555;
 }
 
 .drag-item.dragging {

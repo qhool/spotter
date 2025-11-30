@@ -14,10 +14,6 @@ interface DragReorderContainerProps<T> {
   className?: string;
 }
 
-export interface DragReorderContainerRef {
-  clearItems: () => void;
-}
-
 export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, className = '' }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
