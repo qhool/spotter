@@ -95,54 +95,42 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
   };
 
   return (
-    <div style={{ display: 'flex', gap: '2rem' }}>
-      <div 
-        className={`drag-reorder-container ${className}`}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {items.map((item, index) => {
-          const isDragging = draggedItemId === getItemId(item);
-          
-          return (
-            <div key={getItemId(item)}>
-              {/* Insert drop indicator */}
-              {dragOverIndex === index && draggedItemId && (
-                <div className="drop-indicator">
-                  <div className="drop-line" />
-                </div>
-              )}
-              
-              {/* Draggable item */}
-              <div
-                className={`drag-item ${isDragging ? 'dragging' : ''}`}
-                draggable
-                onDragStart={(e) => handleDragStart(e, getItemId(item))}
-                onDragEnd={handleDragEnd}
-              >
-                {renderItem(item)}
-              </div>
-            </div>
-          );
-        })}
+    <div 
+      className={`drag-reorder-container ${className}`}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {items.map((item, index) => {
+        const isDragging = draggedItemId === getItemId(item);
         
-        {/* Drop indicator at end */}
-        {dragOverIndex === items.length && draggedItemId && (
-          <div className="drop-indicator">
-            <div className="drop-line" />
+        return (
+          <div key={getItemId(item)}>
+            {/* Insert drop indicator */}
+            {dragOverIndex === index && draggedItemId && (
+              <div className="drop-indicator">
+                <div className="drop-line" />
+              </div>
+            )}
+            
+            {/* Draggable item */}
+            <div
+              className={`drag-item ${isDragging ? 'dragging' : ''}`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, getItemId(item))}
+              onDragEnd={handleDragEnd}
+            >
+              {renderItem(item)}
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })}
       
-      {/* Debug text box */}
-      <div className="debug-box">
-        <h4>Drag State</h4>
-        <div className="debug-content">
-          <div>Dragging: {draggedItemId || 'None'}</div>
-          <div>Drop Index: {dragOverIndex ?? 'None'}</div>
-          <div>Total Items: {items.length}</div>
+      {/* Drop indicator at end */}
+      {dragOverIndex === items.length && draggedItemId && (
+        <div className="drop-indicator">
+          <div className="drop-line" />
         </div>
-      </div>
+      )}
     </div>
   );
 };
