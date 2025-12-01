@@ -12,10 +12,11 @@ interface DragReorderContainerProps<T> {
   getItemId: (item: T) => string;
   renderItem: (item: T) => ReactNode;
   getDragItem?: (dragData: any) => T | null;
+  emptyMessage?: string;
   className?: string;
 }
 
-export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, getDragItem, className = '' }: DragReorderContainerProps<T>) {
+export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, getDragItem, emptyMessage, className = '' }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropOccurred, setDropOccurred] = useState<boolean>(false);
@@ -104,6 +105,10 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
             const newItems = [...items];
             newItems.splice(insertIndex, 0, newItem);
             setItems(newItems);
+            
+            // Clear drag state immediately for external drops
+            setIsDragActive(false);
+            setDragOverIndex(null);
             return;
           }
         }
@@ -134,7 +139,7 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
     } catch (error) {
       console.error('Error handling drop:', error);
     }
-    // Note: Don't reset state here - let dragEnd handle it
+    // Note: For internal drags, let dragEnd handle the cleanup
   };
 
   return (
@@ -145,37 +150,45 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
       onDragLeave={handleContainerDragLeave}
       onDrop={handleDrop}
     >
-      {items.map((item, index) => {
-        const isDragging = draggedItemId === getItemId(item);
-        
-        return (
-          <div key={getItemId(item)}>
-            {/* Insert drop indicator */}
-            {dragOverIndex === index && isDragActive && (
-              <div className="drop-indicator">
-                <div className="drop-line" />
-              </div>
-            )}
-            
-            {/* Draggable item */}
-            <div
-              className={`drag-item ${isDragging ? 'dragging' : ''}`}
-              draggable
-              onDragStart={(e) => handleDragStart(e, getItemId(item))}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => handleItemDragOver(e, index)}
-            >
-              {renderItem(item)}
-            </div>
-          </div>
-        );
-      })}
-      
-      {/* Drop indicator at end */}
-      {dragOverIndex === items.length && isDragActive && (
-        <div className="drop-indicator">
-          <div className="drop-line" />
+      {items.length === 0 && emptyMessage ? (
+        <div className="no-results">
+          {emptyMessage}
         </div>
+      ) : (
+        <>
+          {items.map((item, index) => {
+            const isDragging = draggedItemId === getItemId(item);
+            
+            return (
+              <div key={getItemId(item)}>
+                {/* Insert drop indicator */}
+                {dragOverIndex === index && isDragActive && (
+                  <div className="drop-indicator">
+                    <div className="drop-line" />
+                  </div>
+                )}
+                
+                {/* Draggable item */}
+                <div
+                  className={`drag-item ${isDragging ? 'dragging' : ''}`}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, getItemId(item))}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={(e) => handleItemDragOver(e, index)}
+                >
+                  {renderItem(item)}
+                </div>
+              </div>
+            );
+          })}
+          
+          {/* Drop indicator at end */}
+          {dragOverIndex === items.length && isDragActive && (
+            <div className="drop-indicator">
+              <div className="drop-line" />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
