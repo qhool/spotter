@@ -170,6 +170,7 @@ export class RemixContainer<T> extends TrackContainer {
 
   private inputs: [TrackContainer, T][];
   private remixFunction: RemixFunction<T>;
+  private cachedRemixInputs: RemixInput<T>[] | null = null;
   private cachedTracks: Track[] | null = null;
   private isLoading: boolean = false;
 
@@ -205,13 +206,23 @@ export class RemixContainer<T> extends TrackContainer {
     this.isLoading = true;
     
     try {
-      // Get all tracks from each input container
-      const remixInputs: RemixInput<T>[] = await Promise.all(
-        this.inputs.map(async ([container, options]): Promise<RemixInput<T>> => {
-          const tracks = await container.getAllTracks();
-          return [tracks, options];
-        })
-      );
+      // Check if we have cached remix inputs
+      let remixInputs: RemixInput<T>[];
+      
+      if (this.cachedRemixInputs !== null) {
+        remixInputs = this.cachedRemixInputs;
+      } else {
+        // Get all tracks from each input container
+        remixInputs = await Promise.all(
+          this.inputs.map(async ([container, options]): Promise<RemixInput<T>> => {
+            const tracks = await container.getAllTracks();
+            return [tracks, options];
+          })
+        );
+        
+        // Cache the remix inputs
+        this.cachedRemixInputs = remixInputs;
+      }
 
       // Apply the remix function
       this.cachedTracks = this.remixFunction(remixInputs);
@@ -241,6 +252,7 @@ export class RemixContainer<T> extends TrackContainer {
 
   // Method to clear cache and force reload
   clearCache(): void {
+    this.cachedRemixInputs = null;
     this.cachedTracks = null;
   }
 }
