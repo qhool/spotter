@@ -3,6 +3,7 @@ import { Scopes, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState } from 'react'
 import { SelectItemsPage } from './pages/SelectItemsPage';
 import { TestbedPage } from './pages/TestbedPage';
+import { TestTubeSolid } from 'iconoir-react';
 import './App.css'
 
 type Page = 'select-items' | 'testbed';
@@ -23,19 +24,22 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   return (
     <div className="app-container">
       <nav className="navigation">
-        <div className="nav-title">Spotter</div>
+        <div className="nav-left">
+          <button 
+            className={`testbed-link ${currentPage === 'testbed' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('testbed')}
+            aria-label="Testbed"
+          >
+            <TestTubeSolid />
+          </button>
+          <div className="nav-title">Spotter</div>
+        </div>
         <div className="nav-links">
           <button 
             className={`nav-link ${currentPage === 'select-items' ? 'active' : ''}`}
             onClick={() => setCurrentPage('select-items')}
           >
             Select Items
-          </button>
-          <button 
-            className={`nav-link ${currentPage === 'testbed' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('testbed')}
-          >
-            Testbed
           </button>
         </div>
       </nav>

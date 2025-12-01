@@ -23,9 +23,37 @@
   flex-shrink: 0;
 }
 
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .nav-title {
   font-size: 1.5rem;
   font-weight: bold;
+  color: #1db954;
+}
+
+.testbed-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: #888888;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+}
+
+.testbed-link:hover {
+  color: #ffffff;
+}
+
+.testbed-link.active {
   color: #1db954;
 }
 
@@ -210,11 +238,6 @@
 
 .right-panel .playlist-container {
   border: 2px dashed #404040;
-}
-
-.right-panel:hover .playlist-container {
-  border-color: #1db954;
-  background-color: #1a2a1a;
 }
 
 .left-panel .playlist-container {
