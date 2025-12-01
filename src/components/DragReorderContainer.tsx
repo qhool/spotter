@@ -14,9 +14,10 @@ interface DragReorderContainerProps<T> {
   getDragItem?: (dragData: any) => T | null;
   emptyMessage?: string;
   className?: string;
+  disableDragToDelete?: boolean;
 }
 
-export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, getDragItem, emptyMessage, className = '' }: DragReorderContainerProps<T>) {
+export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem, getDragItem, emptyMessage, className = '', disableDragToDelete = false }: DragReorderContainerProps<T>) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [dropOccurred, setDropOccurred] = useState<boolean>(false);
@@ -29,8 +30,8 @@ export function DragReorderContainer<T>({ items, setItems, getItemId, renderItem
   };
 
   const handleDragEnd = () => {
-    // If no drop occurred inside the container, delete the item
-    if (draggedItemId && !dropOccurred) {
+    // If no drop occurred inside the container, delete the item (unless disabled)
+    if (draggedItemId && !dropOccurred && !disableDragToDelete) {
       const currentIndex = items.findIndex(item => getItemId(item) === draggedItemId);
       if (currentIndex !== -1) {
         const newItems = [...items];

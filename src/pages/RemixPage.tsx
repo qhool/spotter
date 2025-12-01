@@ -57,6 +57,7 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
             renderItem={renderSelectedItem}
             emptyMessage="No items selected"
             className="playlist-container"
+            disableDragToDelete={true}
           />
         </div>
 
