@@ -8,9 +8,11 @@ import { DragReorderContainer } from '../components/DragReorderContainer';
 
 interface SelectItemsPageProps {
   sdk: SpotifyApi;
+  selectedItems: TrackContainer[];
+  setSelectedItems: React.Dispatch<React.SetStateAction<TrackContainer[]>>;
 }
 
-export function SelectItemsPage({ sdk }: SelectItemsPageProps) {
+export function SelectItemsPage({ sdk, selectedItems, setSelectedItems }: SelectItemsPageProps) {
   const [items, setItems] = useState<TrackContainer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMyItems, setShowMyItems] = useState(true);
@@ -21,9 +23,6 @@ export function SelectItemsPage({ sdk }: SelectItemsPageProps) {
   const [searchResults, setSearchResults] = useState<any>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   
-  // Selected items state
-  const [selectedItems, setSelectedItems] = useState<TrackContainer[]>([]);
-
   // Helper functions for DragReorderContainer
   const getItemId = (item: TrackContainer) => item.id;
   const renderSelectedItem = (item: TrackContainer) => (

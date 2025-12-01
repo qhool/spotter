@@ -3,10 +3,12 @@ import { Scopes, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState } from 'react'
 import { SelectItemsPage } from './pages/SelectItemsPage';
 import { TestbedPage } from './pages/TestbedPage';
+import { RemixPage } from './pages/RemixPage';
 import { TestTubeSolid } from 'iconoir-react';
+import { TrackContainer } from './data/TrackContainer';
 import './App.css'
 
-type Page = 'select-items' | 'testbed';
+type Page = 'select-items' | 'remix' | 'testbed';
 
 function App() {
   const sdk = useSpotify(
@@ -20,6 +22,7 @@ function App() {
 
 function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   const [currentPage, setCurrentPage] = useState<Page>('select-items');
+  const [selectedItems, setSelectedItems] = useState<TrackContainer[]>([]);
 
   return (
     <div className="app-container">
@@ -41,11 +44,30 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           >
             Select Items
           </button>
+          <button 
+            className={`nav-link ${currentPage === 'remix' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('remix')}
+          >
+            Remix
+          </button>
         </div>
       </nav>
       
       <main className="main-content">
-        {currentPage === 'select-items' && <SelectItemsPage sdk={sdk} />}
+        {currentPage === 'select-items' && (
+          <SelectItemsPage 
+            sdk={sdk} 
+            selectedItems={selectedItems}
+            setSelectedItems={setSelectedItems}
+          />
+        )}
+        {currentPage === 'remix' && (
+          <RemixPage 
+            sdk={sdk} 
+            selectedItems={selectedItems}
+            setSelectedItems={setSelectedItems}
+          />
+        )}
         {currentPage === 'testbed' && <TestbedPage sdk={sdk} />}
       </main>
     </div>
