@@ -2,7 +2,7 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState, useCallback } from 'react'
 import { ItemTile, ContentType } from '../components/ItemTile';
 import { ButtonTile } from '../components/ButtonTile';
-import { PlaceholderTile } from '../components/PlaceholderTile';
+import { TrashSolid } from 'iconoir-react';
 import { LikedSongsContainer, PlaylistContainer, AlbumContainer, TrackContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
 
@@ -30,8 +30,15 @@ export function SelectItemsPage({ sdk }: SelectItemsPageProps) {
     <ItemTile
       item={item}
       contentType={contentType}
-      showRemoveButton={true}
-      onRemove={removeSelectedItem}
+      controls={
+        <button 
+          className="control-button"
+          onClick={() => removeSelectedItem(item.id)}
+          aria-label="Remove item"
+        >
+          <TrashSolid />
+        </button>
+      }
     />
   );
   

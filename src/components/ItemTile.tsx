@@ -1,5 +1,6 @@
 import './ItemTile.css';
 import { TrackContainer } from '../data/TrackContainer';
+import { ReactNode } from 'react';
 
 export type ContentType = 'playlist' | 'album';
 
@@ -9,11 +10,10 @@ interface ItemTileProps {
   onDragStart?: (e: React.DragEvent, item: TrackContainer) => void;
   onDragEnd?: () => void;
   isDragging?: boolean;
-  showRemoveButton?: boolean;
-  onRemove?: (itemId: string) => void;
+  controls?: ReactNode;
 }
 
-export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging = false, showRemoveButton = false, onRemove }: ItemTileProps) {
+export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging = false, controls }: ItemTileProps) {
   console.log('Rendering item:', item); // Debug log
   
   return (
@@ -23,15 +23,6 @@ export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging
       onDragStart={onDragStart ? (e) => onDragStart(e, item) : undefined}
       onDragEnd={onDragEnd}
     >
-      {showRemoveButton && (
-        <button 
-          className="remove-button"
-          onClick={() => onRemove?.(item.id)}
-          aria-label="Remove item"
-        >
-          ×
-        </button>
-      )}
       <div className="item-image">
         {item.coverImage ? (
           <img 
@@ -51,6 +42,11 @@ export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging
           <p className="item-description">{item.description}</p>
         )}
       </div>
+      {controls && (
+        <div className="item-controls">
+          {controls}
+        </div>
+      )}
     </div>
   );
 }

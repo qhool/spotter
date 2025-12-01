@@ -130,26 +130,10 @@
   font-weight: 500;
 }
 
-.remove-button {
+.item-controls {
   position: absolute;
-  top: 0.5rem;
+  bottom: 0.5rem;
   right: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  color: #aaaaaa;
-  cursor: pointer;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: bold;
-  transition: all 0.2s ease;
-}
-
-.remove-button:hover {
-  background: rgba(255, 0, 0, 0.2);
-  color: #ff6b6b;
+  gap: 0.25rem;
 }
