@@ -1,108 +1,36 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useState } from 'react';
-import { DragReorderContainer } from '../components/DragReorderContainer';
-import { PlaceholderTile } from '../components/PlaceholderTile';
+import { useState, useEffect } from 'react';
+import { TrackList } from '../components/TrackList';
+import { LikedSongsContainer } from '../data/TrackContainer';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
 }
 
-interface TestbedItem {
-  id: string;
-  text: string;
-}
+export function TestbedPage({ sdk }: TestbedPageProps) {
+  const [likedSongsContainer, setLikedSongsContainer] = useState<LikedSongsContainer | null>(null);
 
-const createInitialItems = (): TestbedItem[] => 
-  Array.from({ length: 9 }, (_, i) => ({
-    id: `item-${i + 1}`,
-    text: `Item ${i + 1}`
-  }));
-
-export function TestbedPage({}: TestbedPageProps) {
-  const [items, setItems] = useState<TestbedItem[]>(createInitialItems);
-
-  const handleReset = () => {
-    const initialItems = createInitialItems();
-    setItems(initialItems);
-  };
-
-  const handleClearAll = () => {
-    setItems([]);
-  };
-
-  const handleDragItem = (dragData: any): TestbedItem | null => {
-    // Handle external drag data - check if it's a new item
-    if (dragData && dragData.type === 'external-item') {
-      return {
-        id: `external-${Date.now()}`, // Generate unique ID
-        text: dragData.text || 'Dragged Item'
-      };
+  // Create the liked songs container when sdk is available
+  useEffect(() => {
+    if (sdk) {
+      setLikedSongsContainer(new LikedSongsContainer(sdk));
     }
-    return null;
-  };
+  }, [sdk]);
 
   return (
     <div className="testbed-container">
-      {/* Example external drag source */}
-      <div style={{ marginBottom: '1rem' }}>
-        <div
-          draggable
-          onDragStart={(e) => {
-            e.dataTransfer.setData('application/json', JSON.stringify({
-              type: 'external-item',
-              text: 'New Item from Outside'
-            }));
-          }}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            borderRadius: '4px',
-            cursor: 'grab',
-            display: 'inline-block',
-            marginBottom: '1rem'
-          }}
-        >
-          Drag me into the list!
-        </div>
+      <div style={{ marginTop: '2rem' }}>
+        <h3 style={{ color: '#1db954', marginBottom: '1rem' }}>Your Liked Songs</h3>
+        {likedSongsContainer ? (
+          <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #333', borderRadius: '8px', padding: '8px' }}>
+            <TrackList trackContainer={likedSongsContainer} />
+          </div>
+        ) : (
+          <div style={{ color: '#888888', textAlign: 'center', padding: '2rem' }}>
+            Initializing...
+          </div>
+        )}
       </div>
-      
-      <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem' }}>
-        <button 
-          onClick={handleReset}
-          style={{ 
-            padding: '0.5rem 1rem', 
-            backgroundColor: '#1db954',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Reset to Original Order
-        </button>
-        <button 
-          onClick={handleClearAll}
-          style={{ 
-            padding: '0.5rem 1rem', 
-            backgroundColor: '#ff4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Clear All Items
-        </button>
-      </div>
-      <DragReorderContainer 
-        items={items}
-        setItems={setItems}
-        getItemId={(item) => item.id}
-        renderItem={(item) => <PlaceholderTile text={item.text} />}
-        getDragItem={handleDragItem}
-        className="testbed-drag-container"
-      />
     </div>
   );
 }

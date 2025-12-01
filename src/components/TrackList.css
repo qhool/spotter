@@ -1,0 +1,73 @@
+.track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.track-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: #2a2a2a;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.track-item:hover {
+  background-color: #333333;
+}
+
+.track-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0; /* Allow text to truncate */
+  margin-right: 12px;
+}
+
+.track-name {
+  color: #ffffff;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.track-separator {
+  color: #888888;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.track-artist,
+.track-album {
+  color: #bbbbbb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.track-duration {
+  font-family: 'Courier New', 'Monaco', 'Lucida Console', monospace;
+  color: #888888;
+  font-size: 0.85rem;
+  font-weight: normal;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 65px; /* Ensure consistent width for alignment */
+}
+
+.no-tracks {
+  text-align: center;
+  color: #888888;
+  font-style: italic;
+  padding: 2rem;
+}

@@ -4,7 +4,7 @@ import { SpotifyApi, Track, SimplifiedPlaylist, Album } from '@spotify/web-api-t
 export interface TrackResponse {
   items: Track[];
   total: number;
-  next: string | null;
+  next: number | null;
 }
 
 // Abstract base class for all track containers
@@ -23,6 +23,26 @@ export abstract class TrackContainer {
 
   // Abstract method that all subclasses must implement
   abstract getTracks(limit?: number, offset?: number): Promise<TrackResponse>;
+
+  // Method to get all tracks by fetching in batches
+  async getAllTracks(): Promise<Track[]> {
+    const allTracks: Track[] = [];
+    let offset = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await this.getTracks(50, offset);
+      allTracks.push(...response.items);
+      
+      if (response.next !== null) {
+        offset = response.next;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    return allTracks;
+  }
 }
 
 // Container for playlists
@@ -53,12 +73,16 @@ export class PlaylistContainer extends TrackContainer {
       offset
     );
 
+    const filteredItems = response.items
+      .filter(item => item.track && item.track.type === 'track')
+      .map(item => item.track as Track);
+
+    const nextOffset = offset + filteredItems.length;
+
     return {
-      items: response.items
-        .filter(item => item.track && item.track.type === 'track')
-        .map(item => item.track as Track),
+      items: filteredItems,
       total: response.total,
-      next: response.next
+      next: nextOffset < response.total ? nextOffset : null
     };
   }
 }
@@ -93,10 +117,12 @@ export class AlbumContainer extends TrackContainer {
       type: 'track' as const
     } as Track));
 
+    const nextOffset = offset + tracks.length;
+
     return {
       items: tracks,
       total: response.total,
-      next: response.next
+      next: nextOffset < response.total ? nextOffset : null
     };
   }
 }
@@ -119,10 +145,13 @@ export class LikedSongsContainer extends TrackContainer {
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     const response = await this.sdk.currentUser.tracks.savedTracks(validLimit, offset);
 
+    const tracks = response.items.map(item => item.track);
+    const nextOffset = offset + tracks.length;
+
     return {
-      items: response.items.map(item => item.track),
+      items: tracks,
       total: response.total,
-      next: response.next
+      next: nextOffset < response.total ? nextOffset : null
     };
   }
 }
