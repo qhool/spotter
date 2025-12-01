@@ -50,9 +50,6 @@ export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging
         {item.description && (
           <p className="item-description">{item.description}</p>
         )}
-        <div className="item-metadata">
-          <span className="item-type">{item.type}</span>
-        </div>
       </div>
     </div>
   );
