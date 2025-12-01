@@ -1,6 +1,7 @@
 import { Track } from '@spotify/web-api-ts-sdk';
 import { TrackContainer } from '../data/TrackContainer';
 import { useState, useEffect } from 'react';
+import { RefreshDouble } from 'iconoir-react';
 import './TrackList.css';
 
 interface TrackListProps {
@@ -53,7 +54,10 @@ export function TrackList({ trackContainer }: TrackListProps) {
   if (loading) {
     return (
       <div className="track-list">
-        <div className="no-tracks">Loading tracks...</div>
+        <div className="track-loading">
+          <RefreshDouble className="loading-spinner" />
+          <span>Loading tracks...</span>
+        </div>
       </div>
     );
   }
