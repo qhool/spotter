@@ -7,6 +7,10 @@ export interface TrackResponse {
   next: number | null;
 }
 
+// Types for RemixContainer
+export type RemixInput<T> = [Track[], T];
+export type RemixFunction<T> = (inputs: RemixInput<T>[]) => Track[];
+
 // Abstract base class for all track containers
 export abstract class TrackContainer {
   abstract id: string;
@@ -153,5 +157,90 @@ export class LikedSongsContainer extends TrackContainer {
       total: response.total,
       next: nextOffset < response.total ? nextOffset : null
     };
+  }
+}
+
+// Container for remixed tracks
+export class RemixContainer<T> extends TrackContainer {
+  public id: string;
+  public name: string;
+  public description?: string;
+  public coverImage?: { url: string; width?: number; height?: number };
+  public type: 'playlist' | 'album' | 'liked-songs' = 'playlist';
+
+  private inputs: [TrackContainer, T][];
+  private remixFunction: RemixFunction<T>;
+  private cachedTracks: Track[] | null = null;
+  private isLoading: boolean = false;
+
+  constructor(
+    sdk: SpotifyApi,
+    inputs: [TrackContainer, T][],
+    remixFunction: RemixFunction<T>,
+    name: string = 'Remixed Playlist',
+    description?: string
+  ) {
+    super(sdk);
+    this.inputs = inputs;
+    this.remixFunction = remixFunction;
+    this.id = `remix-${Date.now()}`;
+    this.name = name;
+    this.description = description || `Remix of ${inputs.length} source(s)`;
+    this.coverImage = { url: '/images/remix-default.png' };
+  }
+
+  private async loadRemixedTracks(): Promise<Track[]> {
+    if (this.cachedTracks !== null) {
+      return this.cachedTracks;
+    }
+
+    if (this.isLoading) {
+      // Wait for existing load to complete
+      while (this.isLoading) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return this.cachedTracks || [];
+    }
+
+    this.isLoading = true;
+    
+    try {
+      // Get all tracks from each input container
+      const remixInputs: RemixInput<T>[] = await Promise.all(
+        this.inputs.map(async ([container, options]): Promise<RemixInput<T>> => {
+          const tracks = await container.getAllTracks();
+          return [tracks, options];
+        })
+      );
+
+      // Apply the remix function
+      this.cachedTracks = this.remixFunction(remixInputs);
+      return this.cachedTracks;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+    const allTracks = await this.loadRemixedTracks();
+    
+    // Apply pagination to the cached tracks
+    const paginatedTracks = allTracks.slice(offset, offset + limit);
+    const nextOffset = offset + paginatedTracks.length;
+
+    return {
+      items: paginatedTracks,
+      total: allTracks.length,
+      next: nextOffset < allTracks.length ? nextOffset : null
+    };
+  }
+
+  async getAllTracks(): Promise<Track[]> {
+    return this.loadRemixedTracks();
+  }
+
+  // Method to clear cache and force reload
+  clearCache(): void {
+    this.cachedTracks = null;
   }
 }
