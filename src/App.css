@@ -239,8 +239,19 @@
 }
 
 .control-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Specific button type styles */
+.control-button.remove-button:hover {
   background: rgba(255, 0, 0, 0.2);
   color: #ff6b6b;
+}
+
+.control-button.add-button:hover {
+  background: rgba(29, 185, 84, 0.2);
+  color: #1db954;
 }
 
 /* Testbed styles */

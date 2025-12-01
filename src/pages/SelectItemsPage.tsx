@@ -2,7 +2,7 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useEffect, useState, useCallback } from 'react'
 import { ItemTile, ContentType } from '../components/ItemTile';
 import { ButtonTile } from '../components/ButtonTile';
-import { TrashSolid } from 'iconoir-react';
+import { TrashSolid, PlusCircle } from 'iconoir-react';
 import { LikedSongsContainer, PlaylistContainer, AlbumContainer, TrackContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
 
@@ -32,7 +32,7 @@ export function SelectItemsPage({ sdk }: SelectItemsPageProps) {
       contentType={contentType}
       controls={
         <button 
-          className="control-button"
+          className="control-button remove-button"
           onClick={() => removeSelectedItem(item.id)}
           aria-label="Remove item"
         >
@@ -169,6 +169,13 @@ export function SelectItemsPage({ sdk }: SelectItemsPageProps) {
     setSelectedItems(prev => prev.filter(item => item.id !== itemId));
   };
 
+  const addSelectedItem = (item: TrackContainer) => {
+    // Check if item is already selected to avoid duplicates
+    if (!selectedItems.find(selected => selected.id === item.id)) {
+      setSelectedItems(prev => [...prev, item]);
+    }
+  };
+
   // Handle dragging items from search results to add them
   const handleSearchItemDragStart = (e: React.DragEvent, item: TrackContainer) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ id: item.id }));
@@ -189,6 +196,15 @@ export function SelectItemsPage({ sdk }: SelectItemsPageProps) {
       item={item} 
       contentType={contentType} 
       onDragStart={handleSearchItemDragStart}
+      controls={
+        <button 
+          className="control-button add-button"
+          onClick={() => addSelectedItem(item)}
+          aria-label="Add item to selection"
+        >
+          <PlusCircle />
+        </button>
+      }
     />
   ));
 
