@@ -26,6 +26,7 @@
   flex: 1;
   min-width: 0; /* Allow text to truncate */
   margin-right: 12px;
+  max-width: calc(100% - 80px); /* Reserve space for duration */
 }
 
 .track-name {
@@ -36,6 +37,7 @@
   text-overflow: ellipsis;
   flex-shrink: 1;
   min-width: 0;
+  max-width: 40%; /* Give track name max 40% of available width */
 }
 
 .track-separator {
@@ -44,14 +46,24 @@
   flex-shrink: 0;
 }
 
-.track-artist,
-.track-album {
+.track-artist {
   color: #bbbbbb;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex-shrink: 1;
   min-width: 0;
+  max-width: 30%; /* Give artist max 30% of available width */
+}
+
+.track-album {
+  color: #bbbbbb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 2; /* Allow album to shrink more aggressively */
+  min-width: 0;
+  max-width: 30%; /* Give album max 30% of available width */
 }
 
 .track-duration {

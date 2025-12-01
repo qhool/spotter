@@ -26,7 +26,7 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
         sdk,
         inputs,
         shuffleRemix,
-        "Concatenated Remix",
+        "Remix",
         `Combined tracks from ${selectedItems.length} source(s)`
       );
       
@@ -47,7 +47,7 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
   );
 
   return (
-    <div className="select-items-container">
+    <div className="select-items-container remix-page">
       <div className="content-area">
         <div className="left-panel">
           <DragReorderContainer
@@ -62,7 +62,9 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
 
         <div className="right-panel">
           {remixContainer ? (
-            <TrackList trackContainer={remixContainer} />
+            <div className="playlist-container">
+              <TrackList trackContainer={remixContainer} />
+            </div>
           ) : (
             <div className="playlist-container">
               <div className="no-results">

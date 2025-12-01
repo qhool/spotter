@@ -161,23 +161,23 @@ export class LikedSongsContainer extends TrackContainer {
 }
 
 // Container for remixed tracks
-export class RemixContainer<T> extends TrackContainer {
+export class RemixContainer<RemixOptionsType> extends TrackContainer {
   public id: string;
   public name: string;
   public description?: string;
   public coverImage?: { url: string; width?: number; height?: number };
   public type: 'playlist' | 'album' | 'liked-songs' = 'playlist';
 
-  private inputs: [TrackContainer, T][];
-  private remixFunction: RemixFunction<T>;
-  private cachedRemixInputs: RemixInput<T>[] | null = null;
+  private inputs: [TrackContainer, RemixOptionsType][];
+  private remixFunction: RemixFunction<RemixOptionsType>;
+  private cachedRemixInputs: RemixInput<RemixOptionsType>[] | null = null;
   private cachedTracks: Track[] | null = null;
   private isLoading: boolean = false;
 
   constructor(
     sdk: SpotifyApi,
-    inputs: [TrackContainer, T][],
-    remixFunction: RemixFunction<T>,
+    inputs: [TrackContainer, RemixOptionsType][],
+    remixFunction: RemixFunction<RemixOptionsType>,
     name: string = 'Remixed Playlist',
     description?: string
   ) {
@@ -207,14 +207,14 @@ export class RemixContainer<T> extends TrackContainer {
     
     try {
       // Check if we have cached remix inputs
-      let remixInputs: RemixInput<T>[];
+      let remixInputs: RemixInput<RemixOptionsType>[];
       
       if (this.cachedRemixInputs !== null) {
         remixInputs = this.cachedRemixInputs;
       } else {
         // Get all tracks from each input container
         remixInputs = await Promise.all(
-          this.inputs.map(async ([container, options]): Promise<RemixInput<T>> => {
+          this.inputs.map(async ([container, options]): Promise<RemixInput<RemixOptionsType>> => {
             const tracks = await container.getAllTracks();
             return [tracks, options];
           })
