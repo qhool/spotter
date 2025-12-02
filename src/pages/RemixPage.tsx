@@ -14,6 +14,7 @@ interface RemixPageProps {
 
 export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPageProps) {
   const [remixContainer, setRemixContainer] = useState<RemixContainer<undefined> | null>(null);
+  const [activeTab, setActiveTab] = useState<'Options' | 'Preview' | 'Create'>('Preview');
 
   // Create remix container when selectedItems changes
   useEffect(() => {
@@ -62,17 +63,65 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
         </div>
 
         <div className="right-panel">
-          {remixContainer ? (
-            <div className="playlist-container">
-              <TrackList trackContainer={remixContainer} />
+          <div className="tabbed-container">
+            {/* Tab Navigation */}
+            <div className="tab-navigation">
+              <button 
+                className={`tab-button ${activeTab === 'Options' ? 'active' : ''}`}
+                onClick={() => setActiveTab('Options')}
+              >
+                Options
+              </button>
+              <button 
+                className={`tab-button ${activeTab === 'Preview' ? 'active' : ''}`}
+                onClick={() => setActiveTab('Preview')}
+              >
+                Preview
+              </button>
+              <button 
+                className={`tab-button ${activeTab === 'Create' ? 'active' : ''}`}
+                onClick={() => setActiveTab('Create')}
+              >
+                Create
+              </button>
             </div>
-          ) : (
-            <div className="playlist-container">
-              <div className="no-results">
-                Select items to see remixed output
+
+            {/* Tab Content */}
+            <div className="tab-content">
+              {/* Options Tab */}
+              <div className={`tab-pane ${activeTab === 'Options' ? 'active' : 'hidden'}`}>
+                <div className="playlist-container">
+                  <div className="no-results">
+                    Remix options coming soon...
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Tab */}
+              <div className={`tab-pane ${activeTab === 'Preview' ? 'active' : 'hidden'}`}>
+                {remixContainer ? (
+                  <div className="playlist-container">
+                    <TrackList trackContainer={remixContainer} />
+                  </div>
+                ) : (
+                  <div className="playlist-container">
+                    <div className="no-results">
+                      Select items to see remixed output
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Create Tab */}
+              <div className={`tab-pane ${activeTab === 'Create' ? 'active' : 'hidden'}`}>
+                <div className="playlist-container">
+                  <div className="no-results">
+                    Create playlist coming soon...
+                  </div>
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
