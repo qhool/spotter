@@ -6,9 +6,10 @@ import './TrackList.css';
 
 interface TrackListProps {
   trackContainer: TrackContainer;
+  refreshTrigger: number;
 }
 
-export function TrackList({ trackContainer }: TrackListProps) {
+export function TrackList({ trackContainer, refreshTrigger }: TrackListProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +19,7 @@ export function TrackList({ trackContainer }: TrackListProps) {
     const loadAllTracks = async () => {
       setLoading(true);
       setError(null);
+      setTracks([]);
       try {
         const allTracks = await trackContainer.getAllTracks();
         setTracks(allTracks);
@@ -33,7 +35,7 @@ export function TrackList({ trackContainer }: TrackListProps) {
     if (trackContainer) {
       loadAllTracks();
     }
-  }, [trackContainer]);
+  }, [trackContainer, refreshTrigger]);
   // Format duration from milliseconds to [HH:]MM:SS.ss
   const formatDuration = (durationMs: number): string => {
     const totalSeconds = durationMs / 1000;
@@ -86,7 +88,7 @@ export function TrackList({ trackContainer }: TrackListProps) {
         const duration = formatDuration(track.duration_ms);
         
         return (
-          <div key={track.id || index} className="track-item">
+          <div key={`${track.id || 'unknown'}-${index}`} className="track-item">
             <div className="track-info">
               <span className="track-name">{track.name}</span>
               <span className="track-separator"> • </span>

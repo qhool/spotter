@@ -199,8 +199,8 @@ export class RemixContainer<RemixOptionsType> extends TrackContainer {
     this.coverImage = { url: '/images/remix-default.png' };
   }
 
-  private async loadRemixedTracks(force: boolean = false): Promise<Track[]> {
-    if (this.remixedTracks !== null && !force) {
+  private async loadRemixedTracks(): Promise<Track[]> {
+    if (this.remixedTracks !== null) {
       return this.remixedTracks;
     }
 
@@ -251,6 +251,10 @@ export class RemixContainer<RemixOptionsType> extends TrackContainer {
 
   async getAllTracks(): Promise<Track[]> {
     return this.loadRemixedTracks();
+  }
+
+  clearRemixCache() {
+    this.remixedTracks = null;
   }
 
 }

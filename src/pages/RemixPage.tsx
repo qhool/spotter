@@ -4,6 +4,7 @@ import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
 import { TrackList } from '../components/TrackList';
 import { concatenateRemix, shuffleRemix } from '../data/RemixFunctions';
+import { RefreshCircleSolid } from 'iconoir-react';
 import { useState, useEffect } from 'react';
 
 interface RemixPageProps {
@@ -14,6 +15,7 @@ interface RemixPageProps {
 
 export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPageProps) {
   const [remixContainer, setRemixContainer] = useState<RemixContainer<undefined> | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
   const [activeTab, setActiveTab] = useState<'Options' | 'Preview' | 'Create'>('Preview');
 
   // Create remix container when selectedItems changes
@@ -37,6 +39,14 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
       setRemixContainer(null);
     }
   }, [sdk, selectedItems]);
+
+  // Helper function to refresh remix
+  const handleRefreshRemix = async () => {
+    if (remixContainer) {
+      await remixContainer.clearRemixCache();
+      setRefreshCounter(prev => prev + 1);
+    }
+  };
 
   // Helper functions for DragReorderContainer
   const getItemId = (item: TrackContainer) => item.id;
@@ -76,6 +86,15 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
                 className={`tab-button ${activeTab === 'Preview' ? 'active' : ''}`}
                 onClick={() => setActiveTab('Preview')}
               >
+                {activeTab === 'Preview' && remixContainer && (
+                  <RefreshCircleSolid 
+                    className="refresh-icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRefreshRemix();
+                    }}
+                  />
+                )}
                 Preview
               </button>
               <button 
@@ -101,7 +120,7 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
               <div className={`tab-pane ${activeTab === 'Preview' ? 'active' : 'hidden'}`}>
                 {remixContainer ? (
                   <div className="playlist-container">
-                    <TrackList trackContainer={remixContainer} />
+                    <TrackList trackContainer={remixContainer} refreshTrigger={refreshCounter} />
                   </div>
                 ) : (
                   <div className="playlist-container">

@@ -341,6 +341,18 @@
   background-color: #2a2a2a;
 }
 
+.tab-button .refresh-icon {
+  margin-right: 0.5rem;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.tab-button .refresh-icon:hover {
+  transform: rotate(90deg);
+}
+
 .tab-content {
   flex: 1;
   min-height: 0;
