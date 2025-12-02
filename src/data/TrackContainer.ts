@@ -11,6 +11,7 @@ export interface TrackResponse {
 export type RemixInput<T> = [Track[], T];
 export type RemixFunction<T> = (inputs: RemixInput<T>[]) => Track[];
 
+
 // Abstract base class for all track containers
 export abstract class TrackContainer {
   abstract id: string;
@@ -20,32 +21,45 @@ export abstract class TrackContainer {
   abstract type: 'playlist' | 'album' | 'liked-songs';
 
   protected sdk: SpotifyApi;
+  protected totalCount: number | undefined = undefined;
+  protected _fetchedTracks: Track[] = [];
 
   constructor(sdk: SpotifyApi) {
     this.sdk = sdk;
   }
 
   // Abstract method that all subclasses must implement
-  abstract getTracks(limit?: number, offset?: number): Promise<TrackResponse>;
+  protected abstract _getTracks(limit?: number, offset?: number): Promise<TrackResponse>;
+
+  protected async _fillCache(upTo: number): Promise<void> {
+    while (this._fetchedTracks.length < upTo || upTo === -1) {
+      const response = await this._getTracks(50, this._fetchedTracks.length);
+      this._fetchedTracks.push(...response.items);
+      this.totalCount = response.total;
+      if( upTo === -1 ) {
+        upTo = this.totalCount;
+      }
+      if (!response.next) {
+        break;
+      }
+    }
+  }
+
+  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+    await this._fillCache(offset + limit);
+    const end = Math.min(offset + limit, this._fetchedTracks.length);
+    const items = this._fetchedTracks.slice(offset, end);
+    return {
+      items,
+      total: this.totalCount || 0,
+      next: end < (this.totalCount || 0) ? end : null
+    };
+  }
 
   // Method to get all tracks by fetching in batches
   async getAllTracks(): Promise<Track[]> {
-    const allTracks: Track[] = [];
-    let offset = 0;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await this.getTracks(50, offset);
-      allTracks.push(...response.items);
-      
-      if (response.next !== null) {
-        offset = response.next;
-      } else {
-        hasMore = false;
-      }
-    }
-
-    return allTracks;
+    await this._fillCache(-1);
+    return this._fetchedTracks; 
   }
 }
 
@@ -65,7 +79,7 @@ export class PlaylistContainer extends TrackContainer {
     this.coverImage = playlist.images?.[0];
   }
 
-  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
     // Constrain limit to valid values for the API
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     
@@ -77,14 +91,10 @@ export class PlaylistContainer extends TrackContainer {
       offset
     );
 
-    const filteredItems = response.items
-      .filter(item => item.track && item.track.type === 'track')
-      .map(item => item.track as Track);
-
-    const nextOffset = offset + filteredItems.length;
+    const nextOffset = offset + response.items.length; 
 
     return {
-      items: filteredItems,
+      items: response.items.map(item => item.track),
       total: response.total,
       next: nextOffset < response.total ? nextOffset : null
     };
@@ -110,7 +120,7 @@ export class AlbumContainer extends TrackContainer {
     this.coverImage = album.images?.[0];
   }
 
-  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     const response = await this.sdk.albums.tracks(this.id, 'US', validLimit, offset);
     
@@ -145,7 +155,7 @@ export class LikedSongsContainer extends TrackContainer {
     this.coverImage = { url: '/images/liked-songs.png' };
   }
 
-  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     const response = await this.sdk.currentUser.tracks.savedTracks(validLimit, offset);
 
@@ -170,8 +180,7 @@ export class RemixContainer<RemixOptionsType> extends TrackContainer {
 
   private inputs: [TrackContainer, RemixOptionsType][];
   private remixFunction: RemixFunction<RemixOptionsType>;
-  private cachedRemixInputs: RemixInput<RemixOptionsType>[] | null = null;
-  private cachedTracks: Track[] | null = null;
+  private remixedTracks: Track[] | null = null;
   private isLoading: boolean = false;
 
   constructor(
@@ -190,9 +199,9 @@ export class RemixContainer<RemixOptionsType> extends TrackContainer {
     this.coverImage = { url: '/images/remix-default.png' };
   }
 
-  private async loadRemixedTracks(): Promise<Track[]> {
-    if (this.cachedTracks !== null) {
-      return this.cachedTracks;
+  private async loadRemixedTracks(force: boolean = false): Promise<Track[]> {
+    if (this.remixedTracks !== null && !force) {
+      return this.remixedTracks;
     }
 
     if (this.isLoading) {
@@ -200,38 +209,32 @@ export class RemixContainer<RemixOptionsType> extends TrackContainer {
       while (this.isLoading) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      return this.cachedTracks || [];
+      return this.remixedTracks || [];
     }
 
     this.isLoading = true;
     
     try {
       // Check if we have cached remix inputs
-      let remixInputs: RemixInput<RemixOptionsType>[];
-      
-      if (this.cachedRemixInputs !== null) {
-        remixInputs = this.cachedRemixInputs;
-      } else {
-        // Get all tracks from each input container
-        remixInputs = await Promise.all(
-          this.inputs.map(async ([container, options]): Promise<RemixInput<RemixOptionsType>> => {
-            const tracks = await container.getAllTracks();
-            return [tracks, options];
-          })
-        );
+      let remixInputs: RemixInput<RemixOptionsType>[] = await Promise.all(
+        this.inputs.map(async ([container, options]): Promise<RemixInput<RemixOptionsType>> => {
+          const tracks = await container.getAllTracks();
+          return [tracks, options];
+        })
+      );
         
-        // Cache the remix inputs
-        this.cachedRemixInputs = remixInputs;
-      }
-
       // Apply the remix function
-      this.cachedTracks = this.remixFunction(remixInputs);
-      return this.cachedTracks;
+      this.remixedTracks = this.remixFunction(remixInputs);
+      return this.remixedTracks;
     } finally {
       this.isLoading = false;
     }
   }
 
+  protected async _getTracks(_limit: number = 50, _offset: number = 0): Promise<TrackResponse> {
+    throw new Error('_getTracks is not implemented for RemixContainer');
+  }
+  
   async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
     const allTracks = await this.loadRemixedTracks();
     
@@ -250,9 +253,4 @@ export class RemixContainer<RemixOptionsType> extends TrackContainer {
     return this.loadRemixedTracks();
   }
 
-  // Method to clear cache and force reload
-  clearCache(): void {
-    this.cachedRemixInputs = null;
-    this.cachedTracks = null;
-  }
 }
