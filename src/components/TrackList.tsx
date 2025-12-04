@@ -5,7 +5,7 @@ import { RefreshDouble } from 'iconoir-react';
 import './TrackList.css';
 
 interface TrackListProps {
-  trackContainer: TrackContainer;
+  trackContainer: TrackContainer<any>;
   refreshTrigger: number;
 }
 

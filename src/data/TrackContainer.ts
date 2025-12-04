@@ -1,17 +1,19 @@
-import { SpotifyApi, Track, SimplifiedPlaylist, Album, PlaylistedTrack, SimplifiedTrack, SavedTrack } from '@spotify/web-api-ts-sdk';
+import { SpotifyApi, Track, SimplifiedPlaylist, Album, PlaylistedTrack, SimplifiedTrack, SavedTrack, PlayHistory } from '@spotify/web-api-ts-sdk';
 import { RemixFunction, RemixInput, RemixOptions } from './RemixFunctions';
 // Standard format for tracks returned by all containers
+export type Next = number | string | null;
+
 export interface TrackResponse {
   items: Track[];
   total: number;
-  next: number | null;
+  next: Next;
 }
 
 // Raw format for tracks returned by containers (before standardization)
 export interface RawTrackResponse<TrackType> {
   items: TrackType[];
   total: number;
-  next: number | null;
+  next: Next;
 }
 
 // Types for RemixContainer
@@ -29,7 +31,7 @@ export abstract class TrackContainer<TrackType = Track> {
   protected sdk: SpotifyApi;
   protected totalCount: number | undefined = undefined;
   protected _fetchedRawTracks: TrackType[] = [];
-
+  protected _nextOffset: Next = 0;
   constructor(sdk: SpotifyApi) {
     this.sdk = sdk;
   }
@@ -38,16 +40,17 @@ export abstract class TrackContainer<TrackType = Track> {
   protected abstract _standardizeTrack(rawTrack: TrackType): Track;
 
   // Abstract method that all subclasses must implement
-  protected abstract _getTracks(limit?: number, offset?: number): Promise<RawTrackResponse<TrackType>>;
+  protected abstract _getTracks(limit?: number, start?: Next): Promise<RawTrackResponse<TrackType>>;
 
   protected async _fillCache(upTo: number): Promise<void> {
     while (this._fetchedRawTracks.length < upTo || upTo === -1) {
-      const response = await this._getTracks(50, this._fetchedRawTracks.length);
+      const response = await this._getTracks(50, this._nextOffset || 0);
       this._fetchedRawTracks.push(...response.items);
       this.totalCount = response.total;
       if( upTo === -1 ) {
         upTo = this.totalCount;
       }
+      this._nextOffset = response.next;
       if (!response.next) {
         break;
       }
@@ -303,4 +306,38 @@ export class RemixContainer<RemixOptionsType extends RemixOptions> extends Track
     this.remixedTracks = null;
   }
 
+}
+
+// Container for recently played tracks
+export class RecentTracksContainer extends TrackContainer<PlayHistory> {
+  public id: string = 'recent-tracks';
+  public name: string = 'Recently Played';
+  public description?: string = 'Your recently played tracks';
+  public coverImage?: { url: string; width?: number; height?: number };
+  public type: 'playlist' | 'album' | 'liked-songs' = 'playlist';
+  private _maxItems: number;
+
+  constructor(sdk: SpotifyApi, maxItems: number = 1000) {
+    super(sdk);
+    this._maxItems = maxItems;
+    // Use a local image for recent tracks
+    this.coverImage = { url: '/images/recent-tracks.png' };
+  }
+
+  protected _standardizeTrack(rawTrack: PlayHistory): Track {
+    return rawTrack.track;
+  }
+
+  protected async _getTracks(limit: number = 50, before: string | 0): Promise<RawTrackResponse<PlayHistory>> {
+    const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
+    const range: any = before === 0 ? undefined : { type: 'before', timestamp: before };
+
+    const response = await this.sdk.player.getRecentlyPlayedTracks(validLimit, range)
+    
+    return {
+      items: response.items,
+      total: this._maxItems,
+      next: response.cursors?.before
+    };
+  }
 }
