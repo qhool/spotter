@@ -374,3 +374,44 @@
 .tab-pane.hidden {
   display: none;
 }
+
+/* Remix options styling */
+.remix-options {
+  padding: 1.5rem;
+  color: #ffffff;
+}
+
+.option-group {
+  margin-bottom: 1.5rem;
+}
+
+.option-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #ffffff;
+}
+
+.option-select {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.75rem;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 0.5rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.option-select:hover {
+  border-color: #666;
+}
+
+.option-select:focus {
+  outline: none;
+  border-color: #1db954;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
+}

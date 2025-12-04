@@ -1,5 +1,5 @@
 import { SpotifyApi, Track, SimplifiedPlaylist, Album } from '@spotify/web-api-ts-sdk';
-
+import { RemixFunction, RemixInput, RemixOptions } from './RemixFunctions';
 // Standard format for tracks returned by all containers
 export interface TrackResponse {
   items: Track[];
@@ -8,8 +8,7 @@ export interface TrackResponse {
 }
 
 // Types for RemixContainer
-export type RemixInput<T> = [Track[], T];
-export type RemixFunction<T> = (inputs: RemixInput<T>[]) => Track[];
+
 
 
 // Abstract base class for all track containers
@@ -171,7 +170,7 @@ export class LikedSongsContainer extends TrackContainer {
 }
 
 // Container for remixed tracks
-export class RemixContainer<RemixOptionsType> extends TrackContainer {
+export class RemixContainer<RemixOptionsType extends RemixOptions> extends TrackContainer {
   public id: string;
   public name: string;
   public description?: string;

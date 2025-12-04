@@ -3,7 +3,7 @@ import { ItemTile, ContentType } from '../components/ItemTile';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
 import { TrackList } from '../components/TrackList';
-import { concatenateRemix, shuffleRemix } from '../data/RemixFunctions';
+import { getRemixFunction, RemixOptions, RemixMethod } from '../data/RemixFunctions';
 import { RefreshCircleSolid } from 'iconoir-react';
 import { useState, useEffect } from 'react';
 
@@ -14,23 +14,26 @@ interface RemixPageProps {
 }
 
 export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPageProps) {
-  const [remixContainer, setRemixContainer] = useState<RemixContainer<undefined> | null>(null);
+  const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [activeTab, setActiveTab] = useState<'Options' | 'Preview' | 'Create'>('Preview');
+  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
 
-  // Create remix container when selectedItems changes
+  // Create remix container when selectedItems or remixMethod changes
   useEffect(() => {
     if (selectedItems.length > 0) {
-      // Convert selectedItems to [TrackContainer, undefined] tuples
-      const inputs: [TrackContainer, undefined][] = selectedItems.map(container => [container, undefined]);
+      // Convert selectedItems to [TrackContainer, RemixOptions] tuples
+      const inputs: [TrackContainer, RemixOptions][] = 
+        selectedItems.map(container => [container, {}]);
       console.log("Creating remix container with inputs:", inputs);
-      // Create RemixContainer with concatenateRemix
+      // Create RemixContainer with selected remix function
+      const remixFunction = getRemixFunction(remixMethod);
       const container = new RemixContainer(
         sdk,
         inputs,
-        shuffleRemix,
+        remixFunction,
         "Remix",
-        `Combined tracks from ${selectedItems.length} source(s)`
+        `Combined tracks from ${selectedItems.length} source(s) - ${remixMethod}`
       );
       
       setRemixContainer(container);
@@ -38,7 +41,7 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
       console.log("No selected items, clearing remix container");
       setRemixContainer(null);
     }
-  }, [sdk, selectedItems]);
+  }, [sdk, selectedItems, remixMethod]);
 
   // Helper function to refresh remix
   const handleRefreshRemix = async () => {
@@ -110,8 +113,21 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
               {/* Options Tab */}
               <div className={`tab-pane ${activeTab === 'Options' ? 'active' : 'hidden'}`}>
                 <div className="playlist-container">
-                  <div className="no-results">
-                    Remix options coming soon...
+                  <div className="remix-options">
+                    <div className="option-group">
+                      <label htmlFor="remix-method" className="option-label">
+                        Remix Method
+                      </label>
+                      <select 
+                        id="remix-method"
+                        className="option-select"
+                        value={remixMethod}
+                        onChange={(e) => setRemixMethod(e.target.value as RemixMethod)}
+                      >
+                        <option value="shuffle">Shuffle</option>
+                        <option value="concatenate">Concatenate</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
