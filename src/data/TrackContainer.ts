@@ -1,8 +1,15 @@
-import { SpotifyApi, Track, SimplifiedPlaylist, Album } from '@spotify/web-api-ts-sdk';
+import { SpotifyApi, Track, SimplifiedPlaylist, Album, PlaylistedTrack, SimplifiedTrack, SavedTrack } from '@spotify/web-api-ts-sdk';
 import { RemixFunction, RemixInput, RemixOptions } from './RemixFunctions';
 // Standard format for tracks returned by all containers
 export interface TrackResponse {
   items: Track[];
+  total: number;
+  next: number | null;
+}
+
+// Raw format for tracks returned by containers (before standardization)
+export interface RawTrackResponse<TrackType> {
+  items: TrackType[];
   total: number;
   next: number | null;
 }
@@ -12,7 +19,7 @@ export interface TrackResponse {
 
 
 // Abstract base class for all track containers
-export abstract class TrackContainer {
+export abstract class TrackContainer<TrackType = Track> {
   abstract id: string;
   abstract name: string;
   abstract description?: string;
@@ -21,19 +28,22 @@ export abstract class TrackContainer {
 
   protected sdk: SpotifyApi;
   protected totalCount: number | undefined = undefined;
-  protected _fetchedTracks: Track[] = [];
+  protected _fetchedRawTracks: TrackType[] = [];
 
   constructor(sdk: SpotifyApi) {
     this.sdk = sdk;
   }
 
+  // Abstract method to standardize raw track to Spotify Track format
+  protected abstract _standardizeTrack(rawTrack: TrackType): Track;
+
   // Abstract method that all subclasses must implement
-  protected abstract _getTracks(limit?: number, offset?: number): Promise<TrackResponse>;
+  protected abstract _getTracks(limit?: number, offset?: number): Promise<RawTrackResponse<TrackType>>;
 
   protected async _fillCache(upTo: number): Promise<void> {
-    while (this._fetchedTracks.length < upTo || upTo === -1) {
-      const response = await this._getTracks(50, this._fetchedTracks.length);
-      this._fetchedTracks.push(...response.items);
+    while (this._fetchedRawTracks.length < upTo || upTo === -1) {
+      const response = await this._getTracks(50, this._fetchedRawTracks.length);
+      this._fetchedRawTracks.push(...response.items);
       this.totalCount = response.total;
       if( upTo === -1 ) {
         upTo = this.totalCount;
@@ -44,10 +54,10 @@ export abstract class TrackContainer {
     }
   }
 
-  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  async getRawTracks(limit: number = 50, offset: number = 0): Promise<RawTrackResponse<TrackType>> {
     await this._fillCache(offset + limit);
-    const end = Math.min(offset + limit, this._fetchedTracks.length);
-    const items = this._fetchedTracks.slice(offset, end);
+    const end = Math.min(offset + limit, this._fetchedRawTracks.length);
+    const items = this._fetchedRawTracks.slice(offset, end);
     return {
       items,
       total: this.totalCount || 0,
@@ -55,15 +65,30 @@ export abstract class TrackContainer {
     };
   }
 
+  async getAllRawTracks(): Promise<TrackType[]> {
+    await this._fillCache(-1);
+    return this._fetchedRawTracks;
+  }
+
+  async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+    const rawResponse = await this.getRawTracks(limit, offset);
+    const standardizedItems = rawResponse.items.map(rawTrack => this._standardizeTrack(rawTrack));
+    return {
+      items: standardizedItems,
+      total: rawResponse.total,
+      next: rawResponse.next
+    };
+  }
+
   // Method to get all tracks by fetching in batches
   async getAllTracks(): Promise<Track[]> {
-    await this._fillCache(-1);
-    return this._fetchedTracks; 
+    const rawTracks = await this.getAllRawTracks();
+    return rawTracks.map(rawTrack => this._standardizeTrack(rawTrack));
   }
 }
 
 // Container for playlists
-export class PlaylistContainer extends TrackContainer {
+export class PlaylistContainer extends TrackContainer<PlaylistedTrack> {
   public id: string;
   public name: string;
   public description?: string;
@@ -78,7 +103,16 @@ export class PlaylistContainer extends TrackContainer {
     this.coverImage = playlist.images?.[0];
   }
 
-  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  protected _standardizeTrack(rawTrack: PlaylistedTrack): Track {
+    // Handle the case where the track could be an Episode or Track
+    const track = rawTrack.track;
+    if (track.type !== 'track') {
+      throw new Error(`Unsupported track type: ${track.type}`);
+    }
+    return track as Track;
+  }
+
+  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<RawTrackResponse<PlaylistedTrack>> {
     // Constrain limit to valid values for the API
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     
@@ -93,7 +127,7 @@ export class PlaylistContainer extends TrackContainer {
     const nextOffset = offset + response.items.length; 
 
     return {
-      items: response.items.map(item => item.track),
+      items: response.items,
       total: response.total,
       next: nextOffset < response.total ? nextOffset : null
     };
@@ -101,7 +135,7 @@ export class PlaylistContainer extends TrackContainer {
 }
 
 // Container for albums
-export class AlbumContainer extends TrackContainer {
+export class AlbumContainer extends TrackContainer<SimplifiedTrack> {
   public id: string;
   public name: string;
   public description?: string;
@@ -119,21 +153,25 @@ export class AlbumContainer extends TrackContainer {
     this.coverImage = album.images?.[0];
   }
 
-  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  protected _standardizeTrack(rawTrack: SimplifiedTrack): Track {
+    // Convert simplified track to full track by adding album info and missing properties
+    return {
+      ...rawTrack,
+      album: this.album as any, // Album type compatibility issue - cast to any
+      type: 'track' as const,
+      external_ids: {}, // Default empty external IDs
+      popularity: 0 // Default popularity since it's not available in simplified tracks
+    } as unknown as Track;
+  }
+
+  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<RawTrackResponse<SimplifiedTrack>> {
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     const response = await this.sdk.albums.tracks(this.id, 'US', validLimit, offset);
     
-    // Convert simplified tracks to full tracks by adding album info
-    const tracks: Track[] = response.items.map((track: any) => ({
-      ...track,
-      album: this.album,
-      type: 'track' as const
-    } as Track));
-
-    const nextOffset = offset + tracks.length;
+    const nextOffset = offset + response.items.length;
 
     return {
-      items: tracks,
+      items: response.items,
       total: response.total,
       next: nextOffset < response.total ? nextOffset : null
     };
@@ -141,7 +179,7 @@ export class AlbumContainer extends TrackContainer {
 }
 
 // Container for liked songs
-export class LikedSongsContainer extends TrackContainer {
+export class LikedSongsContainer extends TrackContainer<SavedTrack> {
   public id: string = 'liked-songs';
   public name: string = 'Liked Songs';
   public description?: string = 'Your liked songs';
@@ -154,15 +192,18 @@ export class LikedSongsContainer extends TrackContainer {
     this.coverImage = { url: '/images/liked-songs.png' };
   }
 
-  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
+  protected _standardizeTrack(rawTrack: SavedTrack): Track {
+    return rawTrack.track;
+  }
+
+  protected async _getTracks(limit: number = 50, offset: number = 0): Promise<RawTrackResponse<SavedTrack>> {
     const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
     const response = await this.sdk.currentUser.tracks.savedTracks(validLimit, offset);
 
-    const tracks = response.items.map(item => item.track);
-    const nextOffset = offset + tracks.length;
+    const nextOffset = offset + response.items.length;
 
     return {
-      items: tracks,
+      items: response.items,
       total: response.total,
       next: nextOffset < response.total ? nextOffset : null
     };
@@ -170,7 +211,8 @@ export class LikedSongsContainer extends TrackContainer {
 }
 
 // Container for remixed tracks
-export class RemixContainer<RemixOptionsType extends RemixOptions> extends TrackContainer {
+// Container for remixed tracks
+export class RemixContainer<RemixOptionsType extends RemixOptions> extends TrackContainer<Track> {
   public id: string;
   public name: string;
   public description?: string;
@@ -196,6 +238,11 @@ export class RemixContainer<RemixOptionsType extends RemixOptions> extends Track
     this.name = name;
     this.description = description || `Remix of ${inputs.length} source(s)`;
     this.coverImage = { url: '/images/remix-default.png' };
+  }
+
+  protected _standardizeTrack(rawTrack: Track): Track {
+    // RemixContainer already works with standardized Track objects
+    return rawTrack;
   }
 
   private async loadRemixedTracks(): Promise<Track[]> {
@@ -230,7 +277,7 @@ export class RemixContainer<RemixOptionsType extends RemixOptions> extends Track
     }
   }
 
-  protected async _getTracks(_limit: number = 50, _offset: number = 0): Promise<TrackResponse> {
+  protected async _getTracks(_limit: number = 50, _offset: number = 0): Promise<RawTrackResponse<Track>> {
     throw new Error('_getTracks is not implemented for RemixContainer');
   }
   
