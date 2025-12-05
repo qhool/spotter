@@ -1,15 +1,17 @@
 import { useSpotify } from './hooks/useSpotify';
 import { Scopes, SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SelectItemsPage } from './pages/SelectItemsPage';
 import { TestbedPage } from './pages/TestbedPage';
 import { RemixPage } from './pages/RemixPage';
+import { ExportPage } from './pages/ExportPage';
 import { TestTubeSolid } from 'iconoir-react';
-import { TrackContainer } from './data/TrackContainer';
+import { TrackContainer, RemixContainer } from './data/TrackContainer';
+import { getRemixFunction, RemixOptions, RemixMethod } from './data/RemixFunctions';
 import { SlideNav } from './components/SlideNav';
 import './App.css'
 
-type Page = 'select-items' | 'remix' | 'testbed';
+type Page = 'select-items' | 'remix' | 'export' | 'testbed';
 
 function App() {
   const sdk = useSpotify(
@@ -24,11 +26,40 @@ function App() {
 function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   const [currentPage, setCurrentPage] = useState<Page>('select-items');
   const [selectedItems, setSelectedItems] = useState<TrackContainer[]>([]);
+  const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
+  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
+
+  // Create remix container when selectedItems or remixMethod changes
+  useEffect(() => {
+    console.log("useEffect triggered - selectedItems:", selectedItems.length, "remixMethod:", remixMethod);
+    if (selectedItems.length > 0) {
+      // Convert selectedItems to [TrackContainer, RemixOptions] tuples
+      const inputs: [TrackContainer, RemixOptions][] = 
+        selectedItems.map(container => [container, {}]);
+      console.log("Creating remix container with inputs:", inputs);
+      // Create RemixContainer with selected remix function
+      const remixFunction = getRemixFunction(remixMethod);
+      const container = new RemixContainer(
+        sdk,
+        inputs,
+        remixFunction,
+        "Remix",
+        `Combined tracks from ${selectedItems.length} source(s) - ${remixMethod}`
+      );
+      
+      console.log("Successfully created remix container:", container);
+      setRemixContainer(container);
+    } else {
+      console.log("No selected items, clearing remix container");
+      setRemixContainer(null);
+    }
+  }, [sdk, selectedItems, remixMethod]);
 
   const getPageIndex = (page: Page): number => {
     switch (page) {
       case 'select-items': return 0;
       case 'remix': return 1;
+      case 'export': return 2;
       default: return 0; // Default to select-items for testbed
     }
   };
@@ -44,6 +75,10 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
     {
       text: 'Remix',
       onClick: () => setCurrentPage('remix')
+    },
+    {
+      text: 'Export',
+      onClick: () => setCurrentPage('export')
     }
   ];
 
@@ -83,6 +118,15 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
             sdk={sdk} 
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
+            remixContainer={remixContainer}
+            remixMethod={remixMethod}
+            setRemixMethod={setRemixMethod}
+          />
+        )}
+        {currentPage === 'export' && (
+          <ExportPage 
+            sdk={sdk} 
+            remixContainer={remixContainer}
           />
         )}
         {currentPage === 'testbed' && <TestbedPage sdk={sdk} />}

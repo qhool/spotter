@@ -3,44 +3,23 @@ import { ItemTile, ContentType } from '../components/ItemTile';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
 import { TrackList } from '../components/TrackList';
-import { getRemixFunction, RemixOptions, RemixMethod } from '../data/RemixFunctions';
+import { RemixOptions, RemixMethod } from '../data/RemixFunctions';
 import { RefreshCircleSolid } from 'iconoir-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface RemixPageProps {
   sdk: SpotifyApi;
   selectedItems: TrackContainer[];
   setSelectedItems: React.Dispatch<React.SetStateAction<TrackContainer[]>>;
+  remixContainer: RemixContainer<RemixOptions> | null;
+  remixMethod: RemixMethod;
+  setRemixMethod: React.Dispatch<React.SetStateAction<RemixMethod>>;
 }
 
-export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPageProps) {
-  const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
+export function RemixPage({ sdk, selectedItems, setSelectedItems, remixContainer, remixMethod, setRemixMethod }: RemixPageProps) {
   const [refreshCounter, setRefreshCounter] = useState(0);
-  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
 
-  // Create remix container when selectedItems or remixMethod changes
-  useEffect(() => {
-    if (selectedItems.length > 0) {
-      // Convert selectedItems to [TrackContainer, RemixOptions] tuples
-      const inputs: [TrackContainer, RemixOptions][] = 
-        selectedItems.map(container => [container, {}]);
-      console.log("Creating remix container with inputs:", inputs);
-      // Create RemixContainer with selected remix function
-      const remixFunction = getRemixFunction(remixMethod);
-      const container = new RemixContainer(
-        sdk,
-        inputs,
-        remixFunction,
-        "Remix",
-        `Combined tracks from ${selectedItems.length} source(s) - ${remixMethod}`
-      );
-      
-      setRemixContainer(container);
-    } else {
-      console.log("No selected items, clearing remix container");
-      setRemixContainer(null);
-    }
-  }, [sdk, selectedItems, remixMethod]);
+  console.log("RemixPage render - remixContainer:", remixContainer, "selectedItems:", selectedItems.length);
 
   // Helper function to refresh remix
   const handleRefreshRemix = async () => {
