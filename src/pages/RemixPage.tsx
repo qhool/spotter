@@ -16,7 +16,6 @@ interface RemixPageProps {
 export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPageProps) {
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
-  const [activeTab, setActiveTab] = useState<'Options' | 'Preview' | 'Create'>('Preview');
   const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
 
   // Create remix container when selectedItems or remixMethod changes
@@ -76,86 +75,48 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems }: RemixPagePro
         </div>
 
         <div className="right-panel">
-          <div className="tabbed-container">
-            {/* Tab Navigation */}
-            <div className="tab-navigation">
-              <button 
-                className={`tab-button ${activeTab === 'Options' ? 'active' : ''}`}
-                onClick={() => setActiveTab('Options')}
+          {/* Remix Controls */}
+          <div className="remix-controls">
+            <div className="remix-controls-group">
+              <label htmlFor="remix-method" className="control-label">
+                Remix Method
+              </label>
+              <select 
+                id="remix-method"
+                className="control-select"
+                value={remixMethod}
+                onChange={(e) => setRemixMethod(e.target.value as RemixMethod)}
               >
-                Options
-              </button>
-              <button 
-                className={`tab-button ${activeTab === 'Preview' ? 'active' : ''}`}
-                onClick={() => setActiveTab('Preview')}
-              >
-                {activeTab === 'Preview' && remixContainer && (
-                  <RefreshCircleSolid 
-                    className="refresh-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRefreshRemix();
-                    }}
-                  />
-                )}
-                Preview
-              </button>
-              <button 
-                className={`tab-button ${activeTab === 'Create' ? 'active' : ''}`}
-                onClick={() => setActiveTab('Create')}
-              >
-                Create
-              </button>
+                <option value="shuffle">Shuffle</option>
+                <option value="concatenate">Concatenate</option>
+              </select>
             </div>
 
-            {/* Tab Content */}
-            <div className="tab-content">
-              {/* Options Tab */}
-              <div className={`tab-pane ${activeTab === 'Options' ? 'active' : 'hidden'}`}>
-                <div className="playlist-container">
-                  <div className="remix-options">
-                    <div className="option-group">
-                      <label htmlFor="remix-method" className="option-label">
-                        Remix Method
-                      </label>
-                      <select 
-                        id="remix-method"
-                        className="option-select"
-                        value={remixMethod}
-                        onChange={(e) => setRemixMethod(e.target.value as RemixMethod)}
-                      >
-                        <option value="shuffle">Shuffle</option>
-                        <option value="concatenate">Concatenate</option>
-                      </select>
-                    </div>
-                  </div>
+            {remixContainer && (
+              <button 
+                className="refresh-button"
+                onClick={handleRefreshRemix}
+                title="Refresh remix"
+              >
+                <RefreshCircleSolid className="refresh-icon" />
+                Refresh
+              </button>
+            )}
+          </div>
+
+          {/* Track List */}
+          <div className="track-list-area">
+            {remixContainer ? (
+              <div className="playlist-container">
+                <TrackList trackContainer={remixContainer} refreshTrigger={refreshCounter} />
+              </div>
+            ) : (
+              <div className="playlist-container">
+                <div className="no-results">
+                  Select items to see remixed output
                 </div>
               </div>
-
-              {/* Preview Tab */}
-              <div className={`tab-pane ${activeTab === 'Preview' ? 'active' : 'hidden'}`}>
-                {remixContainer ? (
-                  <div className="playlist-container">
-                    <TrackList trackContainer={remixContainer} refreshTrigger={refreshCounter} />
-                  </div>
-                ) : (
-                  <div className="playlist-container">
-                    <div className="no-results">
-                      Select items to see remixed output
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Create Tab */}
-              <div className={`tab-pane ${activeTab === 'Create' ? 'active' : 'hidden'}`}>
-                <div className="playlist-container">
-                  <div className="no-results">
-                    Create playlist coming soon...
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

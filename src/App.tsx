@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { SelectItemsPage } from './pages/SelectItemsPage';
 import { TestbedPage } from './pages/TestbedPage';
 import { RemixPage } from './pages/RemixPage';
-import { TestTubeSolid } from 'iconoir-react';
+import { TestTubeSolid, PageRightSolid, PageLeftSolid } from 'iconoir-react';
 import { TrackContainer } from './data/TrackContainer';
 import './App.css'
 
@@ -37,11 +37,12 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           </button>
           <div className="nav-title">Spotter</div>
         </div>
-        <div className="nav-links">
+        <div className={`nav-links ${currentPage === 'select-items' ? 'select-active' : currentPage === 'remix' ? 'remix-active' : ''}`}>
           <button 
             className={`nav-link ${currentPage === 'select-items' ? 'active' : ''}`}
             onClick={() => setCurrentPage('select-items')}
           >
+            {currentPage === 'remix' && <PageLeftSolid className="page-icon" />}
             Select Items
           </button>
           <button 
@@ -49,6 +50,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
             onClick={() => setCurrentPage('remix')}
           >
             Remix
+            {currentPage === 'select-items' && <PageRightSolid className="page-icon" />}
           </button>
         </div>
       </nav>
