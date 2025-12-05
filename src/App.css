@@ -57,56 +57,11 @@
   color: #1db954;
 }
 
-.nav-links {
+.nav-center {
   display: flex;
   justify-content: center;
   align-items: center;
   flex: 1;
-  gap: 0;
-  transition: transform 0.3s ease;
-}
-
-/* Slide the entire button group to center the active button */
-.nav-links.select-active {
-  transform: translateX(80px);
-}
-
-.nav-links.remix-active {
-  transform: translateX(-80px);
-}
-
-.nav-link {
-  padding: 0.75rem 1.5rem;
-  background: none;
-  border: none;
-  color: #fff;
-  cursor: pointer;
-  transition: color 0.2s ease;
-  font-size: 1.1rem;
-  font-weight: 600;
-  font-variant: small-caps;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-}
-
-.nav-link:not(.active) {
-  opacity: 0.7;
-}
-
-.nav-link:hover {
-  color: #1db954;
-}
-
-.nav-link.active {
-  color: #1db954;
-}
-
-.page-icon {
-  width: 27px;
-  height: 27px;
 }
 
 .main-content {

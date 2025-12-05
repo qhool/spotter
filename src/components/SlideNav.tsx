@@ -34,19 +34,16 @@ export function SlideNav({ items, selectedIndex }: SlideNavProps) {
     }
 
     const outerRect = outerRef.current.getBoundingClientRect();
-    const innerRect = innerRef.current.getBoundingClientRect();
     const selectedItemRect = itemRefs.current[selectedIndex]!.getBoundingClientRect();
 
-    // Calculate the center of the outer container
-    const outerCenter = outerRect.width / 2;
-    
-    // Calculate the selected item's center relative to the inner container
-    const selectedItemCenter = selectedItemRect.left - innerRect.left + selectedItemRect.width / 2;
+    const outerCenter = outerRect.width / 2 + outerRect.left;
+    const selectedItemCenter = selectedItemRect.left + selectedItemRect.width / 2;
     
     // Calculate the offset needed to center the selected item text (ignoring icons)
     const offset = selectedItemCenter - outerCenter;
-    
-    setTranslateX(-offset);
+
+    // getBoundingClientRect returns values *including* current translation
+    setTranslateX(translateX - offset);
   }, [selectedIndex, items]);
 
   return (

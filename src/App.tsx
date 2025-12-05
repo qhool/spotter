@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { SelectItemsPage } from './pages/SelectItemsPage';
 import { TestbedPage } from './pages/TestbedPage';
 import { RemixPage } from './pages/RemixPage';
-import { TestTubeSolid, PageRightSolid, PageLeftSolid } from 'iconoir-react';
+import { TestTubeSolid } from 'iconoir-react';
 import { TrackContainer } from './data/TrackContainer';
+import { SlideNav } from './components/SlideNav';
 import './App.css'
 
 type Page = 'select-items' | 'remix' | 'testbed';
@@ -24,6 +25,28 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   const [currentPage, setCurrentPage] = useState<Page>('select-items');
   const [selectedItems, setSelectedItems] = useState<TrackContainer[]>([]);
 
+  const getPageIndex = (page: Page): number => {
+    switch (page) {
+      case 'select-items': return 0;
+      case 'remix': return 1;
+      default: return 0; // Default to select-items for testbed
+    }
+  };
+
+  // Only show SlideNav for main navigation pages, not testbed
+  const showSlideNav = currentPage !== 'testbed';
+
+  const navItems = [
+    {
+      text: 'Select Items',
+      onClick: () => setCurrentPage('select-items')
+    },
+    {
+      text: 'Remix',
+      onClick: () => setCurrentPage('remix')
+    }
+  ];
+
   return (
     <div className="app-container">
       <nav className="navigation">
@@ -37,21 +60,13 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           </button>
           <div className="nav-title">Spotter</div>
         </div>
-        <div className={`nav-links ${currentPage === 'select-items' ? 'select-active' : currentPage === 'remix' ? 'remix-active' : ''}`}>
-          <button 
-            className={`nav-link ${currentPage === 'select-items' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('select-items')}
-          >
-            {currentPage === 'remix' && <PageLeftSolid className="page-icon" />}
-            Select Items
-          </button>
-          <button 
-            className={`nav-link ${currentPage === 'remix' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('remix')}
-          >
-            Remix
-            {currentPage === 'select-items' && <PageRightSolid className="page-icon" />}
-          </button>
+        <div className="nav-center">
+          {showSlideNav && (
+            <SlideNav 
+              items={navItems}
+              selectedIndex={getPageIndex(currentPage)}
+            />
+          )}
         </div>
       </nav>
       

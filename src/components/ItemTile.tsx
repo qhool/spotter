@@ -14,7 +14,7 @@ interface ItemTileProps {
 }
 
 export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging = false, controls }: ItemTileProps) {
-  console.log('Rendering item:', item); // Debug log
+  //console.log('Rendering item:', item); // Debug log
   
   return (
     <div 
