@@ -14,9 +14,11 @@ interface RemixPageProps {
   remixContainer: RemixContainer<RemixOptions> | null;
   remixMethod: RemixMethod;
   setRemixMethod: React.Dispatch<React.SetStateAction<RemixMethod>>;
+  excludedTrackIds: Set<string>;
+  setExcludedTrackIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
-export function RemixPage({ sdk, selectedItems, setSelectedItems, remixContainer, remixMethod, setRemixMethod }: RemixPageProps) {
+export function RemixPage({ sdk, selectedItems, setSelectedItems, remixContainer, remixMethod, setRemixMethod, excludedTrackIds, setExcludedTrackIds }: RemixPageProps) {
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   console.log("RemixPage render - remixContainer:", remixContainer, "selectedItems:", selectedItems.length);
@@ -87,7 +89,12 @@ export function RemixPage({ sdk, selectedItems, setSelectedItems, remixContainer
           <div className="track-list-area">
             {remixContainer ? (
               <div className="playlist-container">
-                <TrackList trackContainer={remixContainer} refreshTrigger={refreshCounter} />
+                <TrackList 
+                  trackContainer={remixContainer} 
+                  refreshTrigger={refreshCounter}
+                  excludedTrackIds={excludedTrackIds}
+                  setExcludedTrackIds={setExcludedTrackIds}
+                />
               </div>
             ) : (
               <div className="playlist-container">

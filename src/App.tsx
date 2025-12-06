@@ -28,6 +28,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   const [selectedItems, setSelectedItems] = useState<TrackContainer[]>([]);
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
+  const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(new Set());
 
   // Create remix container when selectedItems or remixMethod changes
   useEffect(() => {
@@ -121,12 +122,16 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
             remixContainer={remixContainer}
             remixMethod={remixMethod}
             setRemixMethod={setRemixMethod}
+            excludedTrackIds={excludedTrackIds}
+            setExcludedTrackIds={setExcludedTrackIds}
           />
         )}
         {currentPage === 'export' && (
           <ExportPage 
             sdk={sdk} 
             remixContainer={remixContainer}
+            excludedTrackIds={excludedTrackIds}
+            setExcludedTrackIds={setExcludedTrackIds}
           />
         )}
         {currentPage === 'testbed' && <TestbedPage sdk={sdk} />}

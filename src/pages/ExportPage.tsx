@@ -7,9 +7,11 @@ import { useState } from 'react';
 interface ExportPageProps {
   sdk: SpotifyApi;
   remixContainer: RemixContainer<RemixOptions> | null;
+  excludedTrackIds: Set<string>;
+  setExcludedTrackIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
-export function ExportPage({ sdk, remixContainer }: ExportPageProps) {
+export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedTrackIds }: ExportPageProps) {
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   return (
@@ -20,7 +22,12 @@ export function ExportPage({ sdk, remixContainer }: ExportPageProps) {
           <div className="track-list-area">
             {remixContainer ? (
               <div className="playlist-container">
-                <TrackList trackContainer={remixContainer} refreshTrigger={refreshCounter} />
+                <TrackList 
+                  trackContainer={remixContainer} 
+                  refreshTrigger={refreshCounter}
+                  excludedTrackIds={excludedTrackIds}
+                  setExcludedTrackIds={setExcludedTrackIds}
+                />
               </div>
             ) : (
               <div className="playlist-container">

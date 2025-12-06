@@ -7,12 +7,29 @@ import './TrackList.css';
 interface TrackListProps {
   trackContainer: TrackContainer<any>;
   refreshTrigger: number;
+  excludedTrackIds?: Set<string>;
+  setExcludedTrackIds?: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
-export function TrackList({ trackContainer, refreshTrigger }: TrackListProps) {
+export function TrackList({ trackContainer, refreshTrigger, excludedTrackIds = new Set(), setExcludedTrackIds }: TrackListProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle track exclusion toggle
+  const handleTrackClick = (trackId: string) => {
+    if (!setExcludedTrackIds) return; // If no setter provided, exclusion is disabled
+    
+    setExcludedTrackIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackId)) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+  };
 
   // Load all tracks when trackContainer changes
   useEffect(() => {
@@ -86,9 +103,16 @@ export function TrackList({ trackContainer, refreshTrigger }: TrackListProps) {
         const artistNames = track.artists?.map(artist => artist.name).join(', ') || 'Unknown Artist';
         const albumName = track.album?.name || 'Unknown Album';
         const duration = formatDuration(track.duration_ms);
+        const trackId = track.id || `unknown-${index}`;
+        const isExcluded = excludedTrackIds.has(trackId);
+        const isExcludable = !!setExcludedTrackIds;
         
         return (
-          <div key={`${track.id || 'unknown'}-${index}`} className="track-item">
+          <div 
+            key={`${trackId}-${index}`} 
+            className={`track-item ${isExcluded ? 'excluded' : ''} ${isExcludable ? 'excludable' : ''}`}
+            onClick={() => handleTrackClick(trackId)}
+          >
             <div className="track-info">
               <span className="track-name">{track.name}</span>
               <span className="track-separator"> • </span>
