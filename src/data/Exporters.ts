@@ -50,21 +50,58 @@ export class JSONExportTarget extends InMemoryExportTarget {
  */
 export class PlaylistExportTarget implements RemovableExportTarget {
   private sdk: SpotifyApi;
-  private playlistId: string;
+  private playlistId: string | null;
+  private playlistName?: string;
+  private playlistDescription?: string;
   private currentTracks: Track[] = [];
   private isInitialized = false;
 
-  constructor(sdk: SpotifyApi, playlistId: string) {
+  /**
+   * Create a PlaylistExportTarget
+   * @param sdk Spotify API instance
+   * @param playlistIdOrName Either an existing playlist ID or a name for a new playlist
+   * @param description Description for new playlist (only used if playlistIdOrName is a name)
+   */
+  constructor(sdk: SpotifyApi, playlistIdOrName: string, description?: string) {
     this.sdk = sdk;
-    this.playlistId = playlistId;
+    
+    // If it looks like a Spotify ID (contains alphanumeric), treat as ID, otherwise as name
+    if (playlistIdOrName.match(/^[a-zA-Z0-9]+$/)) {
+      this.playlistId = playlistIdOrName;
+    } else {
+      this.playlistId = null;
+      this.playlistName = playlistIdOrName;
+      this.playlistDescription = description || 'Created by Spotter';
+    }
   }
 
   private async ensureInitialized(): Promise<void> {
     if (this.isInitialized) return;
 
-    // Fetch current playlist tracks
+    // If we don't have a playlist ID, create a new playlist
+    if (!this.playlistId) {
+      if (!this.playlistName) {
+        throw new Error('No playlist ID or name provided');
+      }
+
+      const user = await this.sdk.currentUser.profile();
+      const playlist = await this.sdk.playlists.createPlaylist(
+        user.id,
+        {
+          name: this.playlistName,
+          description: this.playlistDescription || 'Created by Spotter',
+          public: false
+        }
+      );
+      this.playlistId = playlist.id;
+      this.currentTracks = []; // New playlist starts empty
+      this.isInitialized = true;
+      return;
+    }
+
+    // Fetch current playlist tracks for existing playlist
     const response = await this.sdk.playlists.getPlaylistItems(
-      this.playlistId,
+      this.playlistId!,
       'US',
       undefined, // fields
       50, // limit
@@ -79,7 +116,7 @@ export class PlaylistExportTarget implements RemovableExportTarget {
     let offset = 50;
     while (response.total > offset) {
       const nextResponse = await this.sdk.playlists.getPlaylistItems(
-        this.playlistId,
+        this.playlistId!,
         'US',
         undefined,
         50,
@@ -108,7 +145,7 @@ export class PlaylistExportTarget implements RemovableExportTarget {
 
     for (let i = 0; i < trackUris.length; i += batchSize) {
       const batch = trackUris.slice(i, i + batchSize);
-      await this.sdk.playlists.addItemsToPlaylist(this.playlistId, batch);
+      await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, batch);
     }
 
     // Update our local cache
@@ -144,7 +181,7 @@ export class PlaylistExportTarget implements RemovableExportTarget {
       const batch = trackReferences.slice(i, i + batchSize);
       
       await this.sdk.playlists.removeItemsFromPlaylist(
-        this.playlistId,
+        this.playlistId!,
         { tracks: batch.map(ref => ({ uri: ref.uri, positions: ref.positions })) }
       );
     }
@@ -161,6 +198,9 @@ export class PlaylistExportTarget implements RemovableExportTarget {
    * Get the playlist ID
    */
   getPlaylistId(): string {
+    if (!this.playlistId) {
+      throw new Error('Playlist not initialized');
+    }
     return this.playlistId;
   }
 

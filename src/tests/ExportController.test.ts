@@ -44,11 +44,22 @@ const mockTracks: Track[] = [
     getTracksAddedCount: (target: any) => target.getTracksAddedCount()
   },
   {
-    name: 'PlaylistExportTarget',
+    name: 'PlaylistExportTarget (existing playlist)',
     createTarget: () => {
       const mockSdk = new MockSpotifySDK();
-      const target = new PlaylistExportTarget(mockSdk as any, 'test-playlist');
-      (target as any).mockSdk = mockSdk; // Store reference for failure control
+      const target = new PlaylistExportTarget(mockSdk as any, 'existing123'); // Existing playlist ID
+      (target as any).mockSdk = mockSdk;
+      return target;
+    },
+    setFailurePoints: (target: any, points: number[], message: string) => target.mockSdk.setFailurePoints(points, message),
+    getTracksAddedCount: (target: any) => target.mockSdk.getTracksAddedCount()
+  },
+  {
+    name: 'PlaylistExportTarget (new playlist)',
+    createTarget: () => {
+      const mockSdk = new MockSpotifySDK();
+      const target = new PlaylistExportTarget(mockSdk as any, 'My Test Playlist', 'Created by test'); // New playlist
+      (target as any).mockSdk = mockSdk;
       return target;
     },
     setFailurePoints: (target: any, points: number[], message: string) => target.mockSdk.setFailurePoints(points, message),
@@ -143,6 +154,56 @@ describe(`ExportController with ${name}`, () => {
 
 }); // End of forEach loop
 
+describe('PlaylistExportTarget playlist creation', () => {
+  let mockSdk: MockSpotifySDK;
+
+  beforeEach(() => {
+    mockSdk = new MockSpotifySDK();
+  });
+
+  it('should create a new playlist when given a name', async () => {
+    const target = new PlaylistExportTarget(mockSdk as any, 'My New Playlist', 'Test description');
+    const controller = new ExportController(target);
+
+    // Add tracks should trigger playlist creation
+    await controller.append(mockTracks.slice(0, 2));
+
+    const trackIds = await target.getCurrentTrackIDs();
+    expect(trackIds).toEqual(['track1', 'track2']);
+    expect(target.getPlaylistId()).toMatch(/^playlist-\d+$/); // Should be auto-generated ID
+  });
+
+  it('should use existing playlist when given an ID', async () => {
+    // Pre-populate the mock with some tracks
+    mockSdk.addExistingTrack(createMockTrack('existing1', 'Existing Track'));
+
+    const target = new PlaylistExportTarget(mockSdk as any, 'existing123');
+    const controller = new ExportController(target);
+
+    // Should load existing tracks
+    const trackIds = await target.getCurrentTrackIDs();
+    expect(trackIds).toEqual(['existing1']);
+
+    // Add more tracks
+    await controller.append(mockTracks.slice(0, 1));
+    const updatedIds = await target.getCurrentTrackIDs();
+    expect(updatedIds).toEqual(['existing1', 'track1']);
+  });
+
+  it('should handle playlist creation failure', async () => {
+    // Make createPlaylist fail
+    mockSdk.playlists.createPlaylist = async () => {
+      throw new Error('Failed to create playlist');
+    };
+
+    const target = new PlaylistExportTarget(mockSdk as any, 'Failed Playlist');
+    const controller = new ExportController(target);
+
+    await expect(controller.append(mockTracks.slice(0, 1)))
+      .rejects.toThrow('Failed to create playlist');
+  });
+});
+
 describe('JSONExportTarget', () => {
   let jsonTarget: JSONExportTarget;
   let controller: ExportController;
@@ -233,8 +294,23 @@ class MockSpotifySDK {
   private failurePoints: number[] = [];
   private tracksAddedCount = 0;
   private failureMessage = 'Simulated API failure';
+  private nextPlaylistId = 1;
+
+  currentUser = {
+    profile: async () => ({ id: 'test-user-id' })
+  };
 
   playlists = {
+    createPlaylist: async (_userId: string, options: { name: string; description?: string; public?: boolean }) => {
+      const playlistId = `playlist-${this.nextPlaylistId++}`;
+      return {
+        id: playlistId,
+        name: options.name,
+        description: options.description || '',
+        public: options.public || false
+      };
+    },
+
     getPlaylistItems: async (_playlistId: string) => {
       return {
         items: this.playlistTracks.map(track => ({ track })),
@@ -288,5 +364,16 @@ class MockSpotifySDK {
 
   getCurrentTrackIDs(): string[] {
     return this.playlistTracks.map(track => track.id);
+  }
+
+  // Test helper methods
+  addExistingTrack(track: Track): void {
+    this.playlistTracks.push(track);
+    this.tracksAddedCount++;
+  }
+
+  setExistingTracks(tracks: Track[]): void {
+    this.playlistTracks = [...tracks];
+    this.tracksAddedCount = tracks.length;
   }
 }
