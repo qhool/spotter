@@ -34,12 +34,14 @@ export interface RemovableExportTarget extends ExportTarget {
  */
 export class ExportController {
   private target: ExportTarget;
+  private maxRetries: number;
 
-  constructor(target: ExportTarget) {
+  constructor(target: ExportTarget, maxRetries: number = 3) {
     this.target = target;
+    this.maxRetries = maxRetries;
   }
 
-  private async addTracksWithRecovery(tracks: Track[], batchSize: number = 50): Promise<void> {
+  private async addTracksWithRecovery(tracks: Track[], batchSize: number = 50, retryCount: number = 0): Promise<void> {
     // Get starting track IDs
     let currentTrackIds = await this.target.getCurrentTrackIDs();
     
@@ -53,7 +55,13 @@ export class ExportController {
         await this.target.addTracks(batch);
         currentTrackIds = [...currentTrackIds, ...batchTrackIds];
       } catch (error) {
-        console.log('AddTracks failed, checking target state for recovery...');
+        console.log(`AddTracks failed (retry ${retryCount}/${this.maxRetries}), checking target state for recovery...`);
+        
+        // Check if we've exceeded retry limit
+        if (retryCount >= this.maxRetries) {
+          console.error(`Max retries (${this.maxRetries}) exceeded. Giving up on remaining tracks.`);
+          throw new Error(`Export failed after ${this.maxRetries} retry attempts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
         
         // Get actual current state after failure
         const actualTrackIds = await this.target.getCurrentTrackIDs();
@@ -69,8 +77,15 @@ export class ExportController {
         const remainingAllTracks = [...remainingBatchTracks, ...tracks.slice(i + batchSize)];
         
         if (remainingAllTracks.length > 0) {
-          // Recursively process remaining tracks
-          await this.addTracksWithRecovery(remainingAllTracks, batchSize);
+          // Add exponential backoff delay before retrying
+          const delayMs = Math.min(1000 * Math.pow(2, retryCount), 10000); // Max 10 second delay
+          if (retryCount > 0) {
+            console.log(`Waiting ${delayMs}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+          
+          // Recursively process remaining tracks with incremented retry count
+          await this.addTracksWithRecovery(remainingAllTracks, batchSize, retryCount + 1);
           return; // Exit since recursion handles the rest
         }
       }
@@ -81,11 +96,12 @@ export class ExportController {
     return typeof (this.target as any).removeTracks === 'function';
   }
 
-  async append(tracks: Track[], batchSize: number = 50): Promise<void> {
-    await this.addTracksWithRecovery(tracks, batchSize);
+  async append(tracks: Track[], batchSize?: number): Promise<void> {
+    const effectiveBatchSize = batchSize ?? this.target.getMaxAddBatchSize();
+    await this.addTracksWithRecovery(tracks, effectiveBatchSize);
   }
 
-  async replace(tracks: Track[], batchSize: number = 50): Promise<void> {
+  async replace(tracks: Track[], batchSize?: number): Promise<void> {
     if (!this.canReplace) {
       throw new Error('Target does not support replace operation (removeTracks method not available)');
     }
@@ -97,7 +113,8 @@ export class ExportController {
     }
     
     // Add new tracks
-    await this.addTracksWithRecovery(tracks, batchSize);
+    const effectiveBatchSize = batchSize ?? this.target.getMaxAddBatchSize();
+    await this.addTracksWithRecovery(tracks, effectiveBatchSize);
   }
 }
 

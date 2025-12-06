@@ -139,14 +139,9 @@ export class PlaylistExportTarget implements RemovableExportTarget {
 
     if (tracks.length === 0) return;
 
-    // Add tracks to Spotify playlist
+    // Add tracks to Spotify playlist (ExportController handles batching)
     const trackUris = tracks.map(track => track.uri);
-    const batchSize = 100; // Spotify API limit
-
-    for (let i = 0; i < trackUris.length; i += batchSize) {
-      const batch = trackUris.slice(i, i + batchSize);
-      await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, batch);
-    }
+    await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, trackUris);
 
     // Update our local cache
     this.currentTracks.push(...tracks);
@@ -191,7 +186,7 @@ export class PlaylistExportTarget implements RemovableExportTarget {
   }
 
   getMaxAddBatchSize(): number {
-    return 100; // Spotify API limit for adding tracks
+    return 100; // Spotify API limit for adding tracks to playlists
   }
 
   /**

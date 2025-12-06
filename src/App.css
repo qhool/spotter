@@ -544,6 +544,28 @@
   cursor: not-allowed;
 }
 
+.playlist-link-container {
+  margin-top: 0.5rem;
+}
+
+.playlist-link-button {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background-color: transparent;
+  border: 1px solid #1db954;
+  border-radius: 0.375rem;
+  color: #1db954;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.playlist-link-button:hover {
+  background-color: #1db954;
+  color: #ffffff;
+}
+
 .no-export {
   text-align: center;
   color: #b3b3b3;

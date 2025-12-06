@@ -202,6 +202,18 @@ describe('PlaylistExportTarget playlist creation', () => {
     await expect(controller.append(mockTracks.slice(0, 1)))
       .rejects.toThrow('Failed to create playlist');
   });
+
+  it('should respect retry limits and stop retrying after max attempts', async () => {
+    const mockSdk = new MockSpotifySDK();
+    // Set failure points that will always fail
+    mockSdk.setFailurePoints([0, 0, 0, 0, 0], 'Persistent failure');
+    
+    const target = new PlaylistExportTarget(mockSdk as any, 'Test Playlist');
+    const controller = new ExportController(target, 2); // Set max retries to 2
+
+    await expect(controller.append(mockTracks.slice(0, 1)))
+      .rejects.toThrow('Export failed after 2 retry attempts');
+  });
 });
 
 describe('JSONExportTarget', () => {
