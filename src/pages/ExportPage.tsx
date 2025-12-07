@@ -3,8 +3,9 @@ import { RemixContainer } from '../data/TrackContainer';
 import { TrackList } from '../components/TrackList';
 import { RemixOptions } from '../data/RemixFunctions';
 import { useState, useEffect } from 'react';
-import { ExportController } from '../data/ExportController';
+import { ExportController, ProgressHandler } from '../data/ExportController';
 import { JSONExportTarget, PlaylistExportTarget } from '../data/Exporters';
+import { ExportProgressOverlay } from '../components/ExportProgressOverlay';
 
 interface ExportPageProps {
   sdk: SpotifyApi;
@@ -21,6 +22,17 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
   const [isExporting, setIsExporting] = useState(false);
   const [filteredTrackCount, setFilteredTrackCount] = useState<number | null>(null);
   const [lastCreatedPlaylistId, setLastCreatedPlaylistId] = useState<string | null>(null);
+  
+  // Progress tracking state
+  const [progressDescription, setProgressDescription] = useState('');
+  const [progressCompleted, setProgressCompleted] = useState(0);
+  const [progressTracksProcessed, setProgressTracksProcessed] = useState(0);
+  const [progressTotalTracks, setProgressTotalTracks] = useState(0);
+  
+  // Completion state
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState('');
+  const [completionSpotifyId, setCompletionSpotifyId] = useState<string | null>(null);
 
   const updateFilteredTrackCount = async () => {
     if (!remixContainer) {
@@ -43,6 +55,29 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
     updateFilteredTrackCount();
   }, [remixContainer, excludedTrackIds]);
 
+  // Progress handler for export operations
+  const createProgressHandler = (totalTracks: number): ProgressHandler => {
+    return (description: string, completed: number, numberProcessed: number) => {
+      setProgressDescription(description);
+      setProgressCompleted(completed);
+      setProgressTracksProcessed(numberProcessed);
+      setProgressTotalTracks(totalTracks);
+    };
+  };
+
+  // Handle dismissing the completion overlay
+  const handleDismissCompletion = () => {
+    setIsCompleted(false);
+    setIsExporting(false);
+    setCompletionMessage('');
+    setCompletionSpotifyId(null);
+    // Reset progress state
+    setProgressDescription('');
+    setProgressCompleted(0);
+    setProgressTracksProcessed(0);
+    setProgressTotalTracks(0);
+  };
+
   const getFilteredTracks = async () => {
     if (!remixContainer) return [];
     
@@ -58,10 +93,13 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
     try {
       const filteredTracks = await getFilteredTracks();
       
+      // Create progress handler
+      const progressHandler = createProgressHandler(filteredTracks.length);
+      
       if (exportType === 'json') {
         // Use ExportController with JSONExportTarget
         const jsonTarget = new JSONExportTarget();
-        const controller = new ExportController(jsonTarget, 3); // 3 retries for JSON export
+        const controller = new ExportController(jsonTarget, 3, progressHandler); // 3 retries for JSON export
         
         await controller.append(filteredTracks);
         const jsonData = await jsonTarget.getData();
@@ -76,19 +114,23 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        // Show completion
+        setCompletionMessage(`Successfully exported ${filteredTracks.length} tracks to JSON file`);
+        setIsCompleted(true);
       } else {
         // Use ExportController with PlaylistExportTarget
         const playlistTarget = new PlaylistExportTarget(sdk, { name: playlistName, description: playlistDescription });
-        const controller = new ExportController(playlistTarget, 5); // 5 retries for Spotify API (may be more flaky)
+        const controller = new ExportController(playlistTarget, 5, progressHandler); // 5 retries for Spotify API (may be more flaky)
         
         await controller.append(filteredTracks); // Let target determine optimal batch size
         const playlistId = playlistTarget.getPlaylistId();
         setLastCreatedPlaylistId(playlistId);
         
-        // Show success message with option to open playlist
-        if (confirm(`Created playlist "${playlistName}" with ${filteredTracks.length} tracks. Open in Spotify?`)) {
-          window.open(`https://open.spotify.com/playlist/${playlistId}`, '_blank');
-        }
+        // Show completion with Spotify link
+        setCompletionMessage(`Created playlist "${playlistName}" with ${filteredTracks.length} tracks`);
+        setCompletionSpotifyId(playlistId);
+        setIsCompleted(true);
       }
     } catch (error) {
       console.error('Export failed:', error);
@@ -106,9 +148,14 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
       }
       
       alert(errorMessage);
-    } finally {
       setIsExporting(false);
+      // Reset progress state on error
+      setProgressDescription('');
+      setProgressCompleted(0);
+      setProgressTracksProcessed(0);
+      setProgressTotalTracks(0);
     }
+    // Note: We don't reset state in finally block anymore since completion state handles it
   };
 
   const getActionButtonLabel = () => {
@@ -119,6 +166,19 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
 
   return (
     <div className="select-items-container export-page">
+      {/* Progress Overlay */}
+      <ExportProgressOverlay
+        description={progressDescription}
+        completed={progressCompleted}
+        tracksProcessed={progressTracksProcessed}
+        totalTracks={progressTotalTracks}
+        isVisible={isExporting || isCompleted}
+        isCompleted={isCompleted}
+        completionMessage={completionMessage}
+        spotifyPlaylistId={completionSpotifyId || undefined}
+        onDismiss={handleDismissCompletion}
+      />
+      
       <div className="content-area">
         <div className="left-panel">
           {/* Track List showing the remix */}

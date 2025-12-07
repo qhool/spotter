@@ -298,6 +298,14 @@ class TestExportTarget extends InMemoryExportTarget {
   getData(): Track[] {
     return [...this.tracks];
   }
+
+  getOverallDescription(): string {
+    return 'Test export';
+  }
+
+  getInitializationDescription(): string {
+    return 'Initializing test';
+  }
 }
 
 // Mock Spotify SDK for testing PlaylistExportTarget

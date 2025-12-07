@@ -1,6 +1,16 @@
 import { Track } from '@spotify/web-api-ts-sdk';
 
+/**
+ * Progress handler function type
+ */
+export type ProgressHandler = (description: string, completed: number, numberProcessed: number) => void;
+
 export interface ExportTarget {
+  /**
+   * Initialize the export target (e.g., create playlist, set up file)
+   */
+  initialize(): Promise<void>;
+
   /**
    * Add tracks to the target
    * @param tracks Array of tracks to add
@@ -18,6 +28,18 @@ export interface ExportTarget {
    * @returns maximum batch size for adding tracks
    */
   getMaxAddBatchSize(): number;
+
+  /**
+   * Get description of the overall export purpose
+   * @returns Description like "Exporting to new playlist 'My Playlist'"
+   */
+  getOverallDescription(): string;
+
+  /**
+   * Get description of the initialization step
+   * @returns Description like "Creating playlist"
+   */
+  getInitializationDescription(): string;
 }
 
 export interface RemovableExportTarget extends ExportTarget {
@@ -35,13 +57,22 @@ export interface RemovableExportTarget extends ExportTarget {
 export class ExportController {
   private target: ExportTarget;
   private maxRetries: number;
+  private onProgress?: ProgressHandler;
 
-  constructor(target: ExportTarget, maxRetries: number = 3) {
+  constructor(target: ExportTarget, maxRetries: number = 3, onProgress?: ProgressHandler) {
     this.target = target;
     this.maxRetries = maxRetries;
+    this.onProgress = onProgress;
   }
 
-  private async addTracksWithRecovery(tracks: Track[], batchSize: number = 50, retryCount: number = 0): Promise<void> {
+  private async addTracksWithRecovery(
+    tracks: Track[], 
+    batchSize: number = 50, 
+    retryCount: number = 0,
+    totalOperations: number,
+    currentOperation: number,
+    overallDescription: string
+  ): Promise<void> {
     // Get starting track IDs
     let currentTrackIds = await this.target.getCurrentTrackIDs();
     
@@ -49,6 +80,16 @@ export class ExportController {
     for (let i = 0; i < tracks.length; i += batchSize) {
       const batch = tracks.slice(i, i + batchSize);
       const batchTrackIds = batch.map(t => t.id).filter(Boolean) as string[];
+      
+      // Calculate progress for this batch operation
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(tracks.length / batchSize);
+      const operationProgress = currentOperation / totalOperations;
+      const batchProgress = (batchNumber - 1) / totalBatches * (1 / totalOperations);
+      const overallProgress = operationProgress + batchProgress;
+      
+      const description = `${overallDescription}: Adding tracks batch ${batchNumber}/${totalBatches}`;
+      this.onProgress?.(description, overallProgress, currentTrackIds.length + (batchNumber - 1) * batchSize);
       
       try {
         // Add batch and update current list
@@ -85,7 +126,14 @@ export class ExportController {
           }
           
           // Recursively process remaining tracks with incremented retry count
-          await this.addTracksWithRecovery(remainingAllTracks, batchSize, retryCount + 1);
+          await this.addTracksWithRecovery(
+            remainingAllTracks, 
+            batchSize, 
+            retryCount + 1,
+            totalOperations,
+            currentOperation,
+            overallDescription
+          );
           return; // Exit since recursion handles the rest
         }
       }
@@ -98,7 +146,20 @@ export class ExportController {
 
   async append(tracks: Track[], batchSize?: number): Promise<void> {
     const effectiveBatchSize = batchSize ?? this.target.getMaxAddBatchSize();
-    await this.addTracksWithRecovery(tracks, effectiveBatchSize);
+    const overallDescription = this.target.getOverallDescription();
+    
+    // Calculate total operations: initialize + add tracks
+    const totalOperations = 2;
+    
+    // Step 1: Initialize
+    this.onProgress?.(`${overallDescription}: ${this.target.getInitializationDescription()}`, 0, 0);
+    await this.target.initialize();
+    
+    // Step 2: Add tracks
+    await this.addTracksWithRecovery(tracks, effectiveBatchSize, 0, totalOperations, 1, overallDescription);
+    
+    // Complete
+    this.onProgress?.(`${overallDescription}: Complete`, 1, tracks.length);
   }
 
   async replace(tracks: Track[], batchSize?: number): Promise<void> {
@@ -106,15 +167,31 @@ export class ExportController {
       throw new Error('Target does not support replace operation (removeTracks method not available)');
     }
     
-    // Clear existing tracks first by removing all
+    const effectiveBatchSize = batchSize ?? this.target.getMaxAddBatchSize();
+    const overallDescription = this.target.getOverallDescription();
+    
+    // Calculate total operations: initialize + read current tracks + clear + add tracks
+    const totalOperations = 4;
+    
+    // Step 1: Initialize
+    this.onProgress?.(`${overallDescription}: ${this.target.getInitializationDescription()}`, 0, 0);
+    await this.target.initialize();
+    
+    // Step 2: Read current tracks for progress counting
+    this.onProgress?.(`${overallDescription}: Reading current tracks`, 0.25, 0);
     const currentTrackIds = await this.target.getCurrentTrackIDs();
+    
+    // Step 3: Clear existing tracks
     if (currentTrackIds.length > 0) {
+      this.onProgress?.(`${overallDescription}: Clearing existing tracks`, 0.5, 0);
       await (this.target as any).removeTracks(0, undefined);
     }
     
-    // Add new tracks
-    const effectiveBatchSize = batchSize ?? this.target.getMaxAddBatchSize();
-    await this.addTracksWithRecovery(tracks, effectiveBatchSize);
+    // Step 4: Add new tracks
+    await this.addTracksWithRecovery(tracks, effectiveBatchSize, 0, totalOperations, 3, overallDescription);
+    
+    // Complete
+    this.onProgress?.(`${overallDescription}: Complete`, 1, tracks.length);
   }
 }
 

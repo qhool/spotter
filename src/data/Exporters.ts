@@ -7,6 +7,11 @@ import { RemovableExportTarget } from './ExportController';
 export abstract class InMemoryExportTarget implements RemovableExportTarget {
   protected tracks: Track[] = [];
 
+  async initialize(): Promise<void> {
+    // Base implementation - no initialization needed for in-memory targets
+    this.tracks = [];
+  }
+
   async addTracks(tracks: Track[]): Promise<void> {
     this.tracks.push(...tracks);
   }
@@ -34,6 +39,16 @@ export abstract class InMemoryExportTarget implements RemovableExportTarget {
    * @returns The tracks in the desired export format
    */
   abstract getData(): any;
+
+  /**
+   * Abstract method to get description of the overall export purpose
+   */
+  abstract getOverallDescription(): string;
+
+  /**
+   * Abstract method to get description of the initialization step
+   */
+  abstract getInitializationDescription(): string;
 }
 
 /**
@@ -42,6 +57,14 @@ export abstract class InMemoryExportTarget implements RemovableExportTarget {
 export class JSONExportTarget extends InMemoryExportTarget {
   getData(): string {
     return JSON.stringify(this.tracks, null, 2);
+  }
+
+  getOverallDescription(): string {
+    return 'Exporting to JSON format';
+  }
+
+  getInitializationDescription(): string {
+    return 'Preparing JSON export';
   }
 }
 
@@ -73,7 +96,7 @@ export class PlaylistExportTarget implements RemovableExportTarget {
     }
   }
 
-  private async ensurePlaylistExists(): Promise<void> {
+  async initialize(): Promise<void> {
     // If we don't have a playlist ID, create a new playlist
     if (!this.playlistId) {
       if (!this.playlistName) {
@@ -93,21 +116,38 @@ export class PlaylistExportTarget implements RemovableExportTarget {
     }
   }
 
+  private async ensurePlaylistExists(): Promise<void> {
+    // The initialization should have already handled playlist creation
+    if (!this.playlistId) {
+      throw new Error('Playlist not initialized. Call initialize() first.');
+    }
+  }
+
+  getOverallDescription(): string {
+    if (this.playlistId) {
+      return `Exporting to existing playlist (ID: ${this.playlistId})`;
+    } else if (this.playlistName) {
+      return `Exporting to new playlist "${this.playlistName}"`;
+    } else {
+      return 'Exporting to playlist';
+    }
+  }
+
+  getInitializationDescription(): string {
+    if (this.playlistId) {
+      return 'Verifying playlist access';
+    } else {
+      return 'Creating playlist';
+    }
+  }
+
   async addTracks(tracks: Track[]): Promise<void> {
     await this.ensurePlaylistExists();
 
     if (tracks.length === 0) return;
 
-    // Filter out local tracks as they cannot be added to playlists via the API
-    const playableTracks = tracks.filter(track => !track.is_local);
-    
-    if (playableTracks.length === 0) {
-      console.warn('No playable tracks to add (all tracks are local files)');
-      return;
-    }
-
     // Add tracks to Spotify playlist (ExportController handles batching)
-    const trackUris = playableTracks.map(track => track.uri);
+    const trackUris = tracks.map(track => track.uri);
     await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, trackUris);
   }
 
