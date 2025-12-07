@@ -59,6 +59,87 @@
   color: #aaaaaa;
 }
 
+/* Local track styles */
+.track-item.local-track {
+  background-color: #1a1f2e; /* Blue-tinted darker background */
+  opacity: 0.7;
+}
+
+.track-item.local-track:hover {
+  background-color: #252b3a; /* Slightly lighter blue-tinted on hover */
+}
+
+.track-item.local-track .track-name {
+  color: #a8c7fa; /* Light blue tint for text */
+}
+
+.track-item.local-track .track-artist,
+.track-item.local-track .track-album {
+  color: #8db4f8; /* Slightly darker blue for secondary text */
+}
+
+.track-item.local-track .track-separator {
+  color: #6a8cdb; /* Blue tint for separators */
+}
+
+.track-item.local-track .track-duration {
+  color: #7ba0e8; /* Blue tint for duration */
+}
+
+/* Resolved local track styles */
+.track-item.resolved-local {
+  background-color: #2a2a2a; /* Normal background for resolved tracks */
+  opacity: 1; /* Full opacity for resolved tracks */
+}
+
+.track-item.resolved-local:hover {
+  background-color: #333333; /* Normal hover for resolved tracks */
+}
+
+/* Excluded styling takes precedence but preserve icons */
+.track-item.excluded.local-track,
+.track-item.excluded.resolved-local {
+  opacity: 0.6; /* Excluded styling wins for opacity */
+  background-color: #252525; /* Excluded styling wins for background */
+}
+
+.track-item.excluded.local-track:hover,
+.track-item.excluded.resolved-local:hover {
+  background-color: #2a2a2a;
+  opacity: 0.8;
+}
+
+/* Icon styles */
+.track-local-indicator {
+  display: flex;
+  align-items: center;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.track-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.track-icon.local-icon {
+  color: #6a8cdb; /* Blue color for unresolved local tracks */
+}
+
+.track-icon.resolved-icon {
+  color: #4caf50; /* Green color for resolved local tracks */
+}
+
+/* Preserve icon colors even when excluded */
+.track-item.excluded .track-icon.local-icon {
+  color: #6a8cdb; /* Keep blue color for local tracks even when excluded */
+}
+
+.track-item.excluded .track-icon.resolved-icon {
+  color: #4caf50; /* Keep green color for resolved tracks even when excluded */
+}
+
 .track-info {
   display: flex;
   align-items: center;

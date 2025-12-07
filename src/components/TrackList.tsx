@@ -1,7 +1,7 @@
 import { Track } from '@spotify/web-api-ts-sdk';
 import { TrackContainer } from '../data/TrackContainer';
 import { useState, useEffect } from 'react';
-import { RefreshDouble } from 'iconoir-react';
+import { RefreshDouble, Computer, CloudSync } from 'iconoir-react';
 import './TrackList.css';
 
 interface TrackListProps {
@@ -107,13 +107,37 @@ export function TrackList({ trackContainer, refreshTrigger, excludedTrackIds = n
         const isExcluded = excludedTrackIds.has(trackId);
         const isExcludable = !!setExcludedTrackIds;
         
+        // Check if this is a local track or resolved local track
+        const isLocalTrack = track.is_local;
+        const isResolvedLocal = !!(track as any).original_local; // Has original_local property from ResolvedLocalTrack
+        
+        // Build CSS classes
+        const classes = [
+          'track-item',
+          isExcluded && 'excluded',
+          isExcludable && 'excludable',
+          isLocalTrack && 'local-track',
+          isResolvedLocal && 'resolved-local'
+        ].filter(Boolean).join(' ');
+        
         return (
           <div 
             key={`${trackId}-${index}`} 
-            className={`track-item ${isExcluded ? 'excluded' : ''} ${isExcludable ? 'excludable' : ''}`}
+            className={classes}
             onClick={() => handleTrackClick(trackId)}
           >
             <div className="track-info">
+              {/* Local track indicator */}
+              {(isLocalTrack || isResolvedLocal) && (
+                <div className="track-local-indicator">
+                  {isResolvedLocal ? (
+                    <CloudSync className="track-icon resolved-icon" />
+                  ) : (
+                    <Computer className="track-icon local-icon" />
+                  )}
+                </div>
+              )}
+              
               <span className="track-name">{track.name}</span>
               <span className="track-separator"> • </span>
               <span className="track-artist">{artistNames}</span>

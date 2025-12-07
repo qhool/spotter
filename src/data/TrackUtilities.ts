@@ -23,7 +23,7 @@ export async function resolveLocalTrack(sdk: SpotifyApi, localTrack: Track): Pro
   }
 
   const localUri = localTrack.uri;
-
+  console.log('Resolving local track URI:', localUri);
   try {
     // Parse the local URI: spotify:local:artist:album:track:duration
     const parts = localUri.split(':');
