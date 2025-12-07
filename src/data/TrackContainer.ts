@@ -1,5 +1,6 @@
 import { SpotifyApi, Track, SimplifiedPlaylist, Album, PlaylistedTrack, SimplifiedTrack, SavedTrack, PlayHistory } from '@spotify/web-api-ts-sdk';
 import { RemixFunction, RemixInput, RemixOptions } from './RemixFunctions';
+import { resolveLocalTrack, ResolvedLocalTrack } from './TrackUtilities';
 // Standard format for tracks returned by all containers
 export type Next = number | string | null;
 
@@ -32,6 +33,12 @@ export abstract class TrackContainer<TrackType = Track> {
   protected totalCount: number | undefined = undefined;
   protected _fetchedRawTracks: TrackType[] = [];
   protected _nextOffset: Next = 0;
+  
+  // Cache for resolved local tracks: maps raw track index to resolved track promise
+  private _resolvedLocalTrackPromises: Map<number, Promise<ResolvedLocalTrack | null>> = new Map();
+  // Cache for resolved local tracks: maps raw track index to resolved track
+  private _resolvedLocalTracks: Map<number, Track> = new Map();
+  
   constructor(sdk: SpotifyApi) {
     this.sdk = sdk;
   }
@@ -43,9 +50,28 @@ export abstract class TrackContainer<TrackType = Track> {
   protected abstract _getTracks(limit?: number, start?: Next): Promise<RawTrackResponse<TrackType>>;
 
   protected async _fillCache(upTo: number): Promise<void> {
+    if( this.totalCount !== undefined && ( upTo == -1 || upTo > this.totalCount) ) {
+      upTo = this.totalCount;
+    }
     while (this._fetchedRawTracks.length < upTo || upTo === -1) {
       const response = await this._getTracks(50, this._nextOffset || 0);
+      const startIndex = this._fetchedRawTracks.length;
       this._fetchedRawTracks.push(...response.items);
+      
+      // Check for local tracks in the newly fetched items and start resolution
+      for (let i = 0; i < response.items.length; i++) {
+        const rawTrack = response.items[i];
+        const standardizedTrack = this._standardizeTrack(rawTrack);
+        const trackIndex = startIndex + i;
+        
+        if (standardizedTrack.is_local) {
+          // Store the resolution promise in cache (don't await it)
+          console.log(`Starting resolution for local track at index ${trackIndex}`);
+          const resolvePromise = resolveLocalTrack(this.sdk, standardizedTrack);
+          this._resolvedLocalTrackPromises.set(trackIndex, resolvePromise);
+        }
+      }
+      
       this.totalCount = response.total;
       if( upTo === -1 ) {
         upTo = this.totalCount;
@@ -73,20 +99,71 @@ export abstract class TrackContainer<TrackType = Track> {
     return this._fetchedRawTracks;
   }
 
+  /**
+   * Get a standardized track by index, handling local track resolution
+   * @param index Index in the _fetchedRawTracks array
+   * @returns Promise resolving to the standardized track (resolved if local)
+   */
+  private async _getStandardizedTrack(index: number): Promise<Track> {
+    console.log(`Getting standardized track at index ${index}`);
+    // Check if we have a cached resolved track
+    if (this._resolvedLocalTracks.has(index)) {
+      return this._resolvedLocalTracks.get(index)!;
+    }
+    if (this._resolvedLocalTrackPromises.has(index)) {
+      const promise = this._resolvedLocalTrackPromises.get(index)!;
+      this._resolvedLocalTrackPromises.delete(index);
+      try {
+        const resolvedTrack = await promise;
+        if (resolvedTrack) {
+          // Cache the resolved track and clean up the promise
+          this._resolvedLocalTracks.set(index, resolvedTrack);
+          return resolvedTrack;
+        }
+      } catch (error) {
+        console.warn(`Failed to resolve local track at index ${index}:`, error);
+      }
+    }
+
+    // Get the standardized version of the raw track
+    const rawTrack = this._fetchedRawTracks[index];
+    return this._standardizeTrack(rawTrack);
+  }
+
+  /**
+   * Private helper method to resolve local tracks from raw tracks
+   * @param rawTracks Array of raw tracks
+   * @param startIndex Starting index in the raw tracks array
+   * @returns Array of resolved tracks (with local tracks replaced if resolution succeeded)
+   */
+  private async _getStandardizedTracks(
+    limit: number = -1,
+    offset: number = 0
+  ): Promise<Track[]> {
+    await this._fillCache(limit < 0 ? -1 : offset + limit);
+    const tracks: Track[] = [];
+    let end = this._fetchedRawTracks.length;
+    end = Math.min(limit < 0 ? end : limit, end);
+    console.log(`Getting standardized tracks from ${offset} to ${end}`);
+    for (let i = offset; i < end; i++) {
+      const track = await this._getStandardizedTrack(i);
+      tracks.push(track);
+    }
+    return tracks;
+  }
+
   async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
-    const rawResponse = await this.getRawTracks(limit, offset);
-    const standardizedItems = rawResponse.items.map(rawTrack => this._standardizeTrack(rawTrack));
+    const resolvedTracks = await this._getStandardizedTracks(limit, offset);
     return {
-      items: standardizedItems,
-      total: rawResponse.total,
-      next: rawResponse.next
+      items: resolvedTracks,
+      total: resolvedTracks.length,
+      next: resolvedTracks.length === limit ? offset + limit : null
     };
   }
 
   // Method to get all tracks by fetching in batches
   async getAllTracks(): Promise<Track[]> {
-    const rawTracks = await this.getAllRawTracks();
-    return rawTracks.map(rawTrack => this._standardizeTrack(rawTrack));
+    return await this._getStandardizedTracks(-1, 0);
   }
 }
 

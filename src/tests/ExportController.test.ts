@@ -47,7 +47,7 @@ const mockTracks: Track[] = [
     name: 'PlaylistExportTarget (existing playlist)',
     createTarget: () => {
       const mockSdk = new MockSpotifySDK();
-      const target = new PlaylistExportTarget(mockSdk as any, 'existing123'); // Existing playlist ID
+      const target = new PlaylistExportTarget(mockSdk as any, { id: 'existing123' }); // Existing playlist ID
       (target as any).mockSdk = mockSdk;
       return target;
     },
@@ -58,7 +58,7 @@ const mockTracks: Track[] = [
     name: 'PlaylistExportTarget (new playlist)',
     createTarget: () => {
       const mockSdk = new MockSpotifySDK();
-      const target = new PlaylistExportTarget(mockSdk as any, 'My Test Playlist', 'Created by test'); // New playlist
+      const target = new PlaylistExportTarget(mockSdk as any, { name: 'My Test Playlist', description: 'Created by test' }); // New playlist
       (target as any).mockSdk = mockSdk;
       return target;
     },
@@ -162,7 +162,7 @@ describe('PlaylistExportTarget playlist creation', () => {
   });
 
   it('should create a new playlist when given a name', async () => {
-    const target = new PlaylistExportTarget(mockSdk as any, 'My New Playlist', 'Test description');
+    const target = new PlaylistExportTarget(mockSdk as any, { name: 'My New Playlist', description: 'Test description' });
     const controller = new ExportController(target);
 
     // Add tracks should trigger playlist creation
@@ -177,7 +177,7 @@ describe('PlaylistExportTarget playlist creation', () => {
     // Pre-populate the mock with some tracks
     mockSdk.addExistingTrack(createMockTrack('existing1', 'Existing Track'));
 
-    const target = new PlaylistExportTarget(mockSdk as any, 'existing123');
+    const target = new PlaylistExportTarget(mockSdk as any, { id: 'existing123' });
     const controller = new ExportController(target);
 
     // Should load existing tracks
@@ -196,7 +196,7 @@ describe('PlaylistExportTarget playlist creation', () => {
       throw new Error('Failed to create playlist');
     };
 
-    const target = new PlaylistExportTarget(mockSdk as any, 'Failed Playlist');
+    const target = new PlaylistExportTarget(mockSdk as any, { name: 'Failed Playlist' });
     const controller = new ExportController(target);
 
     await expect(controller.append(mockTracks.slice(0, 1)))
@@ -208,7 +208,7 @@ describe('PlaylistExportTarget playlist creation', () => {
     // Set failure points that will always fail
     mockSdk.setFailurePoints([0, 0, 0, 0, 0], 'Persistent failure');
     
-    const target = new PlaylistExportTarget(mockSdk as any, 'Test Playlist');
+    const target = new PlaylistExportTarget(mockSdk as any, { name: 'Test Playlist' });
     const controller = new ExportController(target, 2); // Set max retries to 2
 
     await expect(controller.append(mockTracks.slice(0, 1)))
@@ -347,13 +347,14 @@ class MockSpotifySDK {
       this.tracksAddedCount += newTracks.length;
     },
 
-    removeItemsFromPlaylist: async (_playlistId: string, options: { tracks: Array<{ uri: string; positions: number[] }> }) => {
-      // Remove tracks by position (in reverse order to maintain indices)
-      const positionsToRemove = options.tracks.flatMap(track => track.positions).sort((a, b) => b - a);
-      for (const position of positionsToRemove) {
-        if (position >= 0 && position < this.playlistTracks.length) {
-          this.playlistTracks.splice(position, 1);
-        }
+    updatePlaylistItems: async (_playlistId: string, options: { range_start: number; range_length: number; uris: string[]; insert_before?: number }) => {
+      // If uris is empty and insert_before is omitted, this is a removal operation
+      if (options.uris.length === 0 && options.insert_before === undefined) {
+        // Remove tracks from range_start to range_start + range_length
+        this.playlistTracks.splice(options.range_start, options.range_length);
+      } else {
+        // This would be an insert/replace operation (not implemented for our tests)
+        throw new Error('Mock updatePlaylistItems only supports removal operations');
       }
     }
   };

@@ -53,31 +53,27 @@ export class PlaylistExportTarget implements RemovableExportTarget {
   private playlistId: string | null;
   private playlistName?: string;
   private playlistDescription?: string;
-  private currentTracks: Track[] = [];
-  private isInitialized = false;
 
   /**
    * Create a PlaylistExportTarget
    * @param sdk Spotify API instance
-   * @param playlistIdOrName Either an existing playlist ID or a name for a new playlist
-   * @param description Description for new playlist (only used if playlistIdOrName is a name)
+   * @param options Either { id: string } for existing playlist or { name: string, description?: string } for new playlist
    */
-  constructor(sdk: SpotifyApi, playlistIdOrName: string, description?: string) {
+  constructor(sdk: SpotifyApi, options: { id: string } | { name: string; description?: string }) {
     this.sdk = sdk;
     
-    // If it looks like a Spotify ID (contains alphanumeric), treat as ID, otherwise as name
-    if (playlistIdOrName.match(/^[a-zA-Z0-9]+$/)) {
-      this.playlistId = playlistIdOrName;
+    if ('id' in options) {
+      // Existing playlist
+      this.playlistId = options.id;
     } else {
+      // New playlist to be created
       this.playlistId = null;
-      this.playlistName = playlistIdOrName;
-      this.playlistDescription = description || 'Created by Spotter';
+      this.playlistName = options.name;
+      this.playlistDescription = options.description || 'Created by Spotter';
     }
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (this.isInitialized) return;
-
+  private async ensurePlaylistExists(): Promise<void> {
     // If we don't have a playlist ID, create a new playlist
     if (!this.playlistId) {
       if (!this.playlistName) {
@@ -94,12 +90,75 @@ export class PlaylistExportTarget implements RemovableExportTarget {
         }
       );
       this.playlistId = playlist.id;
-      this.currentTracks = []; // New playlist starts empty
-      this.isInitialized = true;
+    }
+  }
+
+  async addTracks(tracks: Track[]): Promise<void> {
+    await this.ensurePlaylistExists();
+
+    if (tracks.length === 0) return;
+
+    // Filter out local tracks as they cannot be added to playlists via the API
+    const playableTracks = tracks.filter(track => !track.is_local);
+    
+    if (playableTracks.length === 0) {
+      console.warn('No playable tracks to add (all tracks are local files)');
       return;
     }
 
-    // Fetch current playlist tracks for existing playlist
+    // Add tracks to Spotify playlist (ExportController handles batching)
+    const trackUris = playableTracks.map(track => track.uri);
+    await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, trackUris);
+  }
+
+  async getCurrentTrackIDs(): Promise<string[]> {
+    const tracks = await this.getCurrentTracks();
+    return tracks.map(track => track.id).filter(Boolean) as string[];
+  }
+
+  async removeTracks(start: number, end: number | undefined): Promise<void> {
+    await this.ensurePlaylistExists();
+
+    const currentTracks = await this.getCurrentTracks();
+    const endIndex = end ?? currentTracks.length;
+    if (start >= currentTracks.length || start >= endIndex) return;
+
+    if (endIndex - start === 0) return;
+
+    // Use Spotify's updatePlaylistItems endpoint to remove range
+    // Set range_start, range_length, uris=[] and omit insert_before to remove
+    await this.sdk.playlists.updatePlaylistItems(
+      this.playlistId!,
+      {
+        range_start: start,
+        range_length: endIndex - start,
+        uris: [] // Empty array to remove tracks
+        // insert_before is omitted to remove the range
+      }
+    );
+  }
+
+  getMaxAddBatchSize(): number {
+    return 10; // Spotify API limit for adding tracks to playlists
+  }
+
+  /**
+   * Get the playlist ID
+   */
+  getPlaylistId(): string {
+    if (!this.playlistId) {
+      throw new Error('Playlist not initialized');
+    }
+    return this.playlistId;
+  }
+
+  /**
+   * Get current tracks from Spotify
+   */
+  async getCurrentTracks(): Promise<Track[]> {
+    await this.ensurePlaylistExists();
+
+    // Fetch current playlist tracks from Spotify
     const response = await this.sdk.playlists.getPlaylistItems(
       this.playlistId!,
       'US',
@@ -108,7 +167,7 @@ export class PlaylistExportTarget implements RemovableExportTarget {
       0 // offset
     );
 
-    this.currentTracks = response.items
+    let tracks = response.items
       .filter(item => item.track && item.track.type === 'track')
       .map(item => item.track as Track);
 
@@ -127,91 +186,10 @@ export class PlaylistExportTarget implements RemovableExportTarget {
         .filter(item => item.track && item.track.type === 'track')
         .map(item => item.track as Track);
       
-      this.currentTracks.push(...nextTracks);
+      tracks.push(...nextTracks);
       offset += 50;
     }
 
-    this.isInitialized = true;
-  }
-
-  async addTracks(tracks: Track[]): Promise<void> {
-    await this.ensureInitialized();
-
-    if (tracks.length === 0) return;
-
-    // Add tracks to Spotify playlist (ExportController handles batching)
-    const trackUris = tracks.map(track => track.uri);
-    await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, trackUris);
-
-    // Update our local cache
-    this.currentTracks.push(...tracks);
-  }
-
-  async getCurrentTrackIDs(): Promise<string[]> {
-    await this.ensureInitialized();
-    return this.currentTracks.map(track => track.id).filter(Boolean) as string[];
-  }
-
-  async removeTracks(start: number, end: number | undefined): Promise<void> {
-    await this.ensureInitialized();
-
-    const endIndex = end ?? this.currentTracks.length;
-    if (start >= this.currentTracks.length || start >= endIndex) return;
-
-    // Get tracks to remove
-    const tracksToRemove = this.currentTracks.slice(start, endIndex);
-    
-    if (tracksToRemove.length === 0) return;
-
-    // Use Spotify's playlist update endpoint to remove tracks
-    // We need to specify tracks by URI and position
-    const trackReferences = tracksToRemove.map((track, index) => ({
-      uri: track.uri,
-      positions: [start + index]
-    }));
-
-    // Spotify API requires us to remove tracks in batches
-    const batchSize = 100;
-    for (let i = 0; i < trackReferences.length; i += batchSize) {
-      const batch = trackReferences.slice(i, i + batchSize);
-      
-      await this.sdk.playlists.removeItemsFromPlaylist(
-        this.playlistId!,
-        { tracks: batch.map(ref => ({ uri: ref.uri, positions: ref.positions })) }
-      );
-    }
-
-    // Update our local cache
-    this.currentTracks.splice(start, endIndex - start);
-  }
-
-  getMaxAddBatchSize(): number {
-    return 100; // Spotify API limit for adding tracks to playlists
-  }
-
-  /**
-   * Get the playlist ID
-   */
-  getPlaylistId(): string {
-    if (!this.playlistId) {
-      throw new Error('Playlist not initialized');
-    }
-    return this.playlistId;
-  }
-
-  /**
-   * Get current tracks (refreshes from Spotify if needed)
-   */
-  async getCurrentTracks(): Promise<Track[]> {
-    await this.ensureInitialized();
-    return [...this.currentTracks]; // Return copy to prevent external mutation
-  }
-
-  /**
-   * Force refresh the track list from Spotify
-   */
-  async refresh(): Promise<void> {
-    this.isInitialized = false;
-    await this.ensureInitialized();
+    return tracks;
   }
 }

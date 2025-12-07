@@ -78,7 +78,7 @@ export function ExportPage({ sdk, remixContainer, excludedTrackIds, setExcludedT
         URL.revokeObjectURL(url);
       } else {
         // Use ExportController with PlaylistExportTarget
-        const playlistTarget = new PlaylistExportTarget(sdk, playlistName, playlistDescription);
+        const playlistTarget = new PlaylistExportTarget(sdk, { name: playlistName, description: playlistDescription });
         const controller = new ExportController(playlistTarget, 5); // 5 retries for Spotify API (may be more flaky)
         
         await controller.append(filteredTracks); // Let target determine optimal batch size
