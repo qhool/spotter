@@ -23,6 +23,9 @@ jobs:
       run: npm ci
     
     - name: Build for GitHub Pages
+      env:
+        VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
+        VITE_REDIRECT_TARGET: https://qhool.github.io/spotter/
       run: npm run build:github
     
     - name: Deploy to GitHub Pages

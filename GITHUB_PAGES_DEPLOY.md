@@ -8,11 +8,22 @@ This guide explains how to deploy the Spotter application to GitHub Pages.
 
 ### Setup Steps:
 
-1. **Enable GitHub Pages** in your repository:
+1. **Add Spotify Client ID as GitHub Secret**:
+   - Go to your repository Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `VITE_SPOTIFY_CLIENT_ID`
+   - Value: `009b089083604673aabc1bc1df487f3f` (your Spotify app client ID)
+
+2. **Update Spotify App Settings**:
+   - Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   - Edit your Spotter app
+   - Add `https://qhool.github.io/spotter/` to the Redirect URIs list
+
+3. **Enable GitHub Pages** in your repository:
    - Go to Settings → Pages
    - Select "GitHub Actions" as the source
 
-2. **Choose a workflow** (two options provided):
+4. **Choose a workflow** (two options provided):
    - **Option A**: `deploy-github-pages.yml` - Uses official GitHub Pages actions
    - **Option B**: `deploy-github-pages-simple.yml` - Uses peaceiris/actions-gh-pages (simpler)
 
@@ -21,16 +32,16 @@ This guide explains how to deploy the Spotter application to GitHub Pages.
    - Use **Option B** if you want a simpler, more widely-used solution
    - **Delete the one you don't want** to avoid confusion
 
-3. **Push your code**:
+5. **Push your code**:
    ```bash
    git add .
    git commit -m "Add GitHub Actions deployment"
    git push origin main
    ```
 
-4. **Watch the magic happen**:
+6. **Watch the magic happen**:
    - Go to Actions tab to see the deployment progress
-   - Your app will be live at `https://username.github.io/repository-name/`
+   - Your app will be live at `https://qhool.github.io/spotter/`
 
 ### Workflow Features:
 
@@ -145,6 +156,12 @@ Your app will be available at:
 - **Build fails**: Check Actions tab for error logs
 - **Permission denied**: Ensure repository has Pages enabled and proper permissions
 - **Workflow not running**: Push to main branch or trigger manually in Actions tab
+- **Empty Client ID**: Ensure `VITE_SPOTIFY_CLIENT_ID` secret is set in repository settings
+
+### Spotify Authentication Issues:
+- **"Invalid redirect URI"**: Add `https://qhool.github.io/spotter/` to your Spotify app's redirect URIs
+- **"Invalid client ID"**: Verify the client ID secret matches your Spotify app
+- **Auth not working**: Check browser console for CORS or redirect errors
 
 ### Application Issues:
 - **404 errors**: Ensure the `base: './'` setting in vite.config.github.ts

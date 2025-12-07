@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // GitHub Pages specific configuration
 export default defineConfig({
   plugins: [react()],
-  base: './', // Use relative paths for GitHub Pages compatibility
+  base: '/spotter/', // GitHub Pages deployment path
   build: {
     outDir: 'exports/github',
     emptyOutDir: true,

@@ -514,16 +514,6 @@
   margin-bottom: 1.5rem;
 }
 
-.export-info-text {
-  font-size: 0.9rem;
-  color: #666;
-  line-height: 1.4;
-  padding: 0.75rem;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  border-left: 3px solid #007bff;
-}
-
 .export-actions {
   margin-top: 2rem;
 }
