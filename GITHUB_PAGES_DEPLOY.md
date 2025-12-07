@@ -2,15 +2,51 @@
 
 This guide explains how to deploy the Spotter application to GitHub Pages.
 
-## Quick Deploy
+## 🚀 Automated Deployment (Recommended)
 
-Run this command to build the application for GitHub Pages:
+**GitHub Actions will automatically deploy your app when you push to the main branch!**
+
+### Setup Steps:
+
+1. **Enable GitHub Pages** in your repository:
+   - Go to Settings → Pages
+   - Select "GitHub Actions" as the source
+
+2. **Choose a workflow** (two options provided):
+   - **Option A**: `deploy-github-pages.yml` - Uses official GitHub Pages actions
+   - **Option B**: `deploy-github-pages-simple.yml` - Uses peaceiris/actions-gh-pages (simpler)
+
+   **Which to use?**
+   - Use **Option A** if you want the latest official GitHub Pages workflow
+   - Use **Option B** if you want a simpler, more widely-used solution
+   - **Delete the one you don't want** to avoid confusion
+
+3. **Push your code**:
+   ```bash
+   git add .
+   git commit -m "Add GitHub Actions deployment"
+   git push origin main
+   ```
+
+4. **Watch the magic happen**:
+   - Go to Actions tab to see the deployment progress
+   - Your app will be live at `https://username.github.io/repository-name/`
+
+### Workflow Features:
+
+- ✅ **Automatic builds** on every push to main
+- ✅ **Manual triggers** via GitHub Actions tab
+- ✅ **Dependency caching** for faster builds  
+- ✅ **Proper permissions** configured automatically
+- ✅ **Concurrent deployment protection** 
+
+## 📱 Manual Deployment (Backup Method)
+
+If you prefer manual control, you can still use:
 
 ```bash
 npm run build:github
 ```
-
-This creates a complete, deployable version of Spotter in the `exports/github/` directory.
 
 ## Deployment Methods
 
@@ -104,9 +140,16 @@ Your app will be available at:
 
 ## Troubleshooting
 
+### GitHub Actions Issues:
+- **"Pages not enabled"**: Go to Settings → Pages → Select "GitHub Actions" source
+- **Build fails**: Check Actions tab for error logs
+- **Permission denied**: Ensure repository has Pages enabled and proper permissions
+- **Workflow not running**: Push to main branch or trigger manually in Actions tab
+
+### Application Issues:
 - **404 errors**: Ensure the `base: './'` setting in vite.config.github.ts
 - **Blank page**: Check browser console for JavaScript errors
-- **Spotify auth**: Verify redirect URIs in Spotify app settings
+- **Spotify auth**: Verify redirect URIs in Spotify app settings include your GitHub Pages URL
 - **Assets not loading**: Verify all paths are relative (should start with `./`)
 
 ## File Structure
