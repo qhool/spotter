@@ -68,11 +68,11 @@ export function SelectItemsPage({ sdk, selectedItems, setSelectedItems }: Select
           );
           
           // Add liked songs as first item, then playlists
-          results = [likedSongsContainer, ...playlistContainers];
+          results = [likedSongsContainer as any, ...playlistContainers as any];
         } else if (contentType === 'album') {
           const savedAlbums = await sdk.currentUser.albums.savedAlbums();
           results = savedAlbums.items.map(savedAlbum => 
-            new AlbumContainer(sdk, savedAlbum.album as any) // Cast since Album and SimplifiedAlbum are compatible for our use
+            new AlbumContainer(sdk, savedAlbum.album as any) as any // Cast for compatibility
           );
         }
         setItems(results);
@@ -122,11 +122,11 @@ export function SelectItemsPage({ sdk, selectedItems, setSelectedItems }: Select
       
       if (contentType === 'playlist') {
         const rawPlaylists = (searchData.playlists?.items || []).filter(item => item != null);
-        results = rawPlaylists.map(playlist => new PlaylistContainer(sdk, playlist as any)); // Cast for compatibility
+        results = rawPlaylists.map(playlist => new PlaylistContainer(sdk, playlist as any) as any); // Cast for compatibility
         pageData = searchData.playlists;
       } else if (contentType === 'album') {
         const rawAlbums = (searchData.albums?.items || []).filter(item => item != null);
-        results = rawAlbums.map(album => new AlbumContainer(sdk, album as any)); // Cast for compatibility
+        results = rawAlbums.map(album => new AlbumContainer(sdk, album as any) as any); // Cast for compatibility
         pageData = searchData.albums;
       }
       

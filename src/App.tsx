@@ -113,7 +113,6 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
         )}
         {currentPage === 'remix' && (
           <RemixPage 
-            sdk={sdk} 
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
             remixContainer={remixContainer}

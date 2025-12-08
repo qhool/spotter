@@ -9,7 +9,7 @@ export interface RemixOptions {
 
 export const concatenateRemix: RemixFunction<RemixOptions> = 
 (input: RemixInput<RemixOptions>[]): Track[] =>   {
-  return input.reduce((acc, [tracks, options]) => {
+  return input.reduce((acc, [tracks]) => {
     // Apply any options if needed
     return acc.concat(tracks);
   }, [] as Track[]);
@@ -17,7 +17,7 @@ export const concatenateRemix: RemixFunction<RemixOptions> =
 
 export const shuffleRemix: RemixFunction<RemixOptions> = 
 (input: RemixInput<RemixOptions>[]): Track[] =>   {
-  const allTracks = input.reduce((acc, [tracks, options]) => {
+  const allTracks = input.reduce((acc, [tracks]) => {
     return acc.concat(tracks);
   }, [] as Track[]);
 

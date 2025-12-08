@@ -1,4 +1,3 @@
-import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { ItemTile, ContentType } from '../components/ItemTile';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
@@ -8,7 +7,6 @@ import { RefreshCircleSolid } from 'iconoir-react';
 import { useState } from 'react';
 
 interface RemixPageProps {
-  sdk: SpotifyApi;
   selectedItems: TrackContainer[];
   setSelectedItems: React.Dispatch<React.SetStateAction<TrackContainer[]>>;
   remixContainer: RemixContainer<RemixOptions> | null;
@@ -18,7 +16,7 @@ interface RemixPageProps {
   setExcludedTrackIds: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
-export function RemixPage({ sdk, selectedItems, setSelectedItems, remixContainer, remixMethod, setRemixMethod, excludedTrackIds, setExcludedTrackIds }: RemixPageProps) {
+export function RemixPage({ selectedItems, setSelectedItems, remixContainer, remixMethod, setRemixMethod, excludedTrackIds, setExcludedTrackIds }: RemixPageProps) {
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   console.log("RemixPage render - remixContainer:", remixContainer, "selectedItems:", selectedItems.length);
