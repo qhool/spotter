@@ -1,6 +1,7 @@
 import { SpotifyApi, Track, SimplifiedPlaylist, Album, PlaylistedTrack, SimplifiedTrack, SavedTrack, PlayHistory } from '@spotify/web-api-ts-sdk';
 import { RemixFunction, RemixInput, RemixOptions } from './RemixFunctions';
 import { resolveLocalTrack, ResolvedLocalTrack } from './TrackUtilities';
+import { resolveAssetUrl } from '../utils/assetUtils';
 // Standard format for tracks returned by all containers
 export type Next = number | string | null;
 
@@ -268,8 +269,8 @@ export class LikedSongsContainer extends TrackContainer<SavedTrack> {
 
   constructor(sdk: SpotifyApi, _totalCount: number = 0) {
     super(sdk);
-    // Use a local image for liked songs
-    this.coverImage = { url: '/images/liked-songs.png' };
+    // Use a local image for liked songs with proper base URL resolution
+    this.coverImage = { url: resolveAssetUrl('/images/liked-songs.png') };
   }
 
   protected _standardizeTrack(rawTrack: SavedTrack): Track {
@@ -317,7 +318,7 @@ export class RemixContainer<RemixOptionsType extends RemixOptions> extends Track
     this.id = `remix-${Date.now()}`;
     this.name = name;
     this.description = description || `Remix of ${inputs.length} source(s)`;
-    this.coverImage = { url: '/images/remix-default.png' };
+    this.coverImage = { url: resolveAssetUrl('/images/remix-default.png') };
   }
 
   protected _standardizeTrack(rawTrack: Track): Track {
@@ -397,8 +398,8 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
   constructor(sdk: SpotifyApi, maxItems: number = 1000) {
     super(sdk);
     this._maxItems = maxItems;
-    // Use a local image for recent tracks
-    this.coverImage = { url: '/images/recent-tracks.png' };
+    // Use a local image for recent tracks with proper base URL resolution
+    this.coverImage = { url: resolveAssetUrl('/images/recent-tracks.png') };
   }
 
   protected _standardizeTrack(rawTrack: PlayHistory): Track {
