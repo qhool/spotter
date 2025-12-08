@@ -8,9 +8,10 @@ This guide explains how to deploy the Spotter application to GitHub Pages.
 
 ### Setup Steps:
 
-1. **Add Spotify Client ID as GitHub Secret**:
+1. **Add Spotify Client ID as GitHub Variable**:
    - Go to your repository Settings → Secrets and variables → Actions
-   - Click "New repository secret"
+   - Click the "Variables" tab
+   - Click "New repository variable"
    - Name: `VITE_SPOTIFY_CLIENT_ID`
    - Value: `009b089083604673aabc1bc1df487f3f` (your Spotify app client ID)
 
@@ -156,11 +157,11 @@ Your app will be available at:
 - **Build fails**: Check Actions tab for error logs
 - **Permission denied**: Ensure repository has Pages enabled and proper permissions
 - **Workflow not running**: Push to main branch or trigger manually in Actions tab
-- **Empty Client ID**: Ensure `VITE_SPOTIFY_CLIENT_ID` secret is set in repository settings
+- **Empty Client ID**: Ensure `VITE_SPOTIFY_CLIENT_ID` variable is set in repository settings (Variables tab)
 
 ### Spotify Authentication Issues:
 - **"Invalid redirect URI"**: Add `https://qhool.github.io/spotter/` to your Spotify app's redirect URIs
-- **"Invalid client ID"**: Verify the client ID secret matches your Spotify app
+- **"Invalid client ID"**: Verify the client ID variable matches your Spotify app
 - **Auth not working**: Check browser console for CORS or redirect errors
 
 ### Application Issues:
