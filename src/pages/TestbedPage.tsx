@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import { TrackList } from '../components/TrackList';
 import { RecentTracksContainer } from '../data/TrackContainer';
 import { SlideNav } from '../components/SlideNav';
+import { ArrowLeft } from 'iconoir-react';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
+  onBackToApp?: () => void;
 }
 
-export function TestbedPage({ sdk }: TestbedPageProps) {
+export function TestbedPage({ sdk, onBackToApp }: TestbedPageProps) {
   const [recentTracksContainer, setRecentTracksContainer] = useState<RecentTracksContainer | null>(null);
   const [selectedNavIndex, setSelectedNavIndex] = useState(0);
 
@@ -30,6 +32,17 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
 
   return (
     <div className="testbed-container">
+      {/* Back to App Navigation */}
+      {onBackToApp && (
+        <div className="testbed-header">
+          <button className="back-to-app-button" onClick={onBackToApp}>
+            <ArrowLeft />
+            Back to App
+          </button>
+          <h1>Scary Testing Page</h1>
+        </div>
+      )}
+      
       <div style={{ marginBottom: '2rem' }}>
         <h3 style={{ color: '#1db954', marginBottom: '1rem' }}>SlideNav Test</h3>
         <SlideNav items={navItems} selectedIndex={selectedNavIndex} />

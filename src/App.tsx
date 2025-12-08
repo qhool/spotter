@@ -5,7 +5,7 @@ import { SelectItemsPage } from './pages/SelectItemsPage';
 import { TestbedPage } from './pages/TestbedPage';
 import { RemixPage } from './pages/RemixPage';
 import { ExportPage } from './pages/ExportPage';
-import { TestTubeSolid } from 'iconoir-react';
+import { HamburgerMenu } from './components/HamburgerMenu';
 import { TrackContainer, RemixContainer } from './data/TrackContainer';
 import { getRemixFunction, RemixOptions, RemixMethod } from './data/RemixFunctions';
 import { SlideNav } from './components/SlideNav';
@@ -87,13 +87,10 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
     <div className="app-container">
       <nav className="navigation">
         <div className="nav-left">
-          <button 
-            className={`testbed-link ${currentPage === 'testbed' ? 'active' : ''}`}
-            onClick={() => setCurrentPage('testbed')}
-            aria-label="Testbed"
-          >
-            <TestTubeSolid />
-          </button>
+          <HamburgerMenu 
+            sdk={sdk}
+            onTestbedClick={() => setCurrentPage('testbed')}
+          />
           <div className="nav-title">Spotter</div>
         </div>
         <div className="nav-center">
@@ -134,7 +131,12 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
             setExcludedTrackIds={setExcludedTrackIds}
           />
         )}
-        {currentPage === 'testbed' && <TestbedPage sdk={sdk} />}
+        {currentPage === 'testbed' && (
+          <TestbedPage 
+            sdk={sdk} 
+            onBackToApp={() => setCurrentPage('select-items')}
+          />
+        )}
       </main>
     </div>
   );

@@ -1,0 +1,141 @@
+import { useState, useRef, useEffect } from 'react';
+import { Menu, LogOut, TestTubeSolid, UserCircle } from 'iconoir-react';
+import { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import './HamburgerMenu.css';
+
+interface HamburgerMenuProps {
+  sdk: SpotifyApi;
+  onTestbedClick: () => void;
+}
+
+interface UserProfile {
+  display_name: string;
+  email?: string;
+  images?: Array<{ url: string }>;
+  followers?: { total: number };
+}
+
+export function HamburgerMenu({ sdk, onTestbedClick }: HamburgerMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await sdk.currentUser.profile();
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error);
+      }
+    };
+
+    if (sdk) {
+      fetchUserProfile();
+    }
+  }, [sdk]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        menuRef.current && 
+        buttonRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    // Clear any cached tokens and reload to restart auth flow
+    localStorage.removeItem('spotify-sdk-access-token');
+    localStorage.removeItem('spotify-sdk-refresh-token');
+    localStorage.removeItem('spotify-sdk-verifier');
+    window.location.reload();
+  };
+
+  const handleTestbedClick = () => {
+    onTestbedClick();
+    setIsOpen(false);
+  };
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div className="hamburger-menu">
+      <button
+        ref={buttonRef}
+        className="hamburger-button"
+        onClick={toggleMenu}
+        aria-label="User menu"
+        aria-expanded={isOpen}
+      >
+        <Menu />
+      </button>
+
+      {isOpen && (
+        <div ref={menuRef} className="hamburger-dropdown">
+          {/* User Profile Section */}
+          {userProfile && (
+            <div className="user-profile-section">
+              <div className="user-avatar">
+                {userProfile.images && userProfile.images.length > 0 ? (
+                  <img 
+                    src={userProfile.images[0].url} 
+                    alt="User avatar"
+                    className="avatar-image"
+                  />
+                ) : (
+                  <UserCircle className="avatar-fallback" />
+                )}
+              </div>
+              <div className="user-info">
+                <div className="user-name">
+                  {userProfile.display_name || 'Spotify User'}
+                </div>
+                {userProfile.followers && (
+                  <div className="user-stats">
+                    {userProfile.followers.total} followers
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="menu-divider"></div>
+
+          {/* Menu Items */}
+          <div className="menu-items">
+            <button 
+              className="menu-item testbed-item"
+              onClick={handleTestbedClick}
+            >
+              <TestTubeSolid className="menu-icon" />
+              Scary Testing Page
+            </button>
+
+            <button 
+              className="menu-item logout-item"
+              onClick={handleLogout}
+            >
+              <LogOut className="menu-icon" />
+              Log Out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -27,34 +27,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.nav-title {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #1db954;
-}
-
-.testbed-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: none;
-  border: none;
-  color: #888888;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: color 0.2s ease;
-}
-
-.testbed-link:hover {
-  color: #ffffff;
-}
-
-.testbed-link.active {
-  color: #1db954;
+  flex: 0 0 auto;
 }
 
 .nav-center {
@@ -62,6 +35,12 @@
   justify-content: center;
   align-items: center;
   flex: 1;
+}
+
+.nav-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1db954;
 }
 
 .main-content {
@@ -78,6 +57,40 @@
 
 .testbed-container {
   padding: 2rem;
+}
+
+.testbed-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.back-to-app-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: 1px solid #1db954;
+  color: #1db954;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.back-to-app-button:hover {
+  background-color: #1db954;
+  color: #000000;
+}
+
+.testbed-header h1 {
+  color: #ff6b35;
+  margin: 0;
+  font-size: 1.5rem;
 }
 
 .testbed-container h1 {
