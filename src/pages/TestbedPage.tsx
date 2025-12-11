@@ -5,6 +5,7 @@ import { RecentTracksContainer } from '../data/TrackContainer';
 import { SlideNav } from '../components/SlideNav';
 import { ArrowLeft } from 'iconoir-react';
 import { Wizard, WizardPane, WizardPaneRenderContext, WizardViewTitles } from '../components/Wizard';
+import { SearchPane } from '../components/SearchPane';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
@@ -15,6 +16,10 @@ export function TestbedPage({ sdk, onBackToApp }: TestbedPageProps) {
   const [recentTracksContainer, setRecentTracksContainer] = useState<RecentTracksContainer | null>(null);
   const [selectedNavIndex, setSelectedNavIndex] = useState(0);
   const [demoWindowSize, setDemoWindowSize] = useState(1);
+  const [searchDemoQuery, setSearchDemoQuery] = useState('');
+  const [searchDemoType, setSearchDemoType] = useState<'playlist' | 'album'>('playlist');
+  const [searchDemoMyItems, setSearchDemoMyItems] = useState(true);
+  const [searchDemoItems, setSearchDemoItems] = useState<JSX.Element[]>([]);
   const baseViewTitles = useMemo<WizardViewTitles>(
     () => ({
       1: ['Select Items', 'Remix', 'Export'],
@@ -47,6 +52,27 @@ export function TestbedPage({ sdk, onBackToApp }: TestbedPageProps) {
             heading="Select Items"
             description="Pick playlists or artists to use as inputs."
             context={context}
+            extraContent={
+              <SearchPane
+                contentType={searchDemoType}
+                showMyItems={searchDemoMyItems}
+                searchQuery={searchDemoQuery}
+                loading={false}
+                itemTiles={searchDemoItems}
+                onToggleMyItems={checked => setSearchDemoMyItems(checked)}
+                onContentTypeChange={value => setSearchDemoType(value)}
+                onSearchQueryChange={value => setSearchDemoQuery(value)}
+                onSearchSubmit={event => {
+                  event.preventDefault();
+                  setSearchDemoMyItems(false);
+                  setSearchDemoItems([
+                    <div key="demo-result" className="no-results">
+                      Pretend search for "{searchDemoQuery}" ({searchDemoType}).
+                    </div>
+                  ]);
+                }}
+              />
+            }
           />
         )
       },
@@ -158,9 +184,10 @@ interface WizardDemoPaneProps {
   heading: string;
   description: string;
   context: WizardPaneRenderContext;
+  extraContent?: React.ReactNode;
 }
 
-function WizardDemoPane({ heading, description, context }: WizardDemoPaneProps) {
+function WizardDemoPane({ heading, description, context, extraContent }: WizardDemoPaneProps) {
   const { self, panes, windowSize, windowStartIndex } = context;
   const visiblePeers = panes.filter(pane => pane.id !== self.id && pane.isVisible);
   const windowLabel = `${windowStartIndex + 1} - ${windowStartIndex + windowSize}`;
@@ -209,6 +236,8 @@ function WizardDemoPane({ heading, description, context }: WizardDemoPaneProps) 
           </button>
         ))}
       </div>
+
+      {extraContent && <div style={{ marginTop: '1rem' }}>{extraContent}</div>}
     </div>
   );
 }
