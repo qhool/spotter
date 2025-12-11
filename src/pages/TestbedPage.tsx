@@ -4,7 +4,7 @@ import { TrackList } from '../components/TrackList';
 import { RecentTracksContainer } from '../data/TrackContainer';
 import { SlideNav } from '../components/SlideNav';
 import { ArrowLeft } from 'iconoir-react';
-import { Wizard, WizardPane, WizardPaneRenderContext } from '../components/Wizard';
+import { Wizard, WizardPane, WizardPaneRenderContext, WizardViewTitles } from '../components/Wizard';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
@@ -14,6 +14,29 @@ interface TestbedPageProps {
 export function TestbedPage({ sdk, onBackToApp }: TestbedPageProps) {
   const [recentTracksContainer, setRecentTracksContainer] = useState<RecentTracksContainer | null>(null);
   const [selectedNavIndex, setSelectedNavIndex] = useState(0);
+  const [demoWindowSize, setDemoWindowSize] = useState(1);
+  const baseViewTitles = useMemo<WizardViewTitles>(
+    () => ({
+      1: ['Select Items', 'Remix', 'Export'],
+      2: ['Select + Remix', 'Remix + Export'],
+      3: ['Production Flow']
+    }),
+    []
+  );
+
+  const wizardViewTitles = useMemo<WizardViewTitles>(() => {
+    const titles: WizardViewTitles = {};
+    if (baseViewTitles[1]) {
+      titles[1] = baseViewTitles[1];
+    }
+    if (demoWindowSize >= 2 && baseViewTitles[2]) {
+      titles[2] = baseViewTitles[2];
+    }
+    if (demoWindowSize >= 3 && baseViewTitles[3]) {
+      titles[3] = baseViewTitles[3];
+    }
+    return titles;
+  }, [baseViewTitles, demoWindowSize]);
   const wizardPanes = useMemo<WizardPane[]>(
     () => [
       {
@@ -84,7 +107,30 @@ export function TestbedPage({ sdk, onBackToApp }: TestbedPageProps) {
       
       <div style={{ marginBottom: '2rem' }}>
         <h3 style={{ color: '#1db954', marginBottom: '1rem' }}>Wizard Test</h3>
-        <Wizard panes={wizardPanes} visibleRange={1} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            marginBottom: '1rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <label htmlFor="wizard-pane-slider" style={{ fontWeight: 600 }}>
+            Max panes visible: {demoWindowSize}
+          </label>
+          <input
+            id="wizard-pane-slider"
+            type="range"
+            min={1}
+            max={3}
+            step={1}
+            value={demoWindowSize}
+            onChange={event => setDemoWindowSize(Number(event.target.value))}
+            style={{ flexGrow: 1, minWidth: '160px' }}
+          />
+        </div>
+        <Wizard panes={wizardPanes} visibleRange={1} viewTitles={wizardViewTitles} />
       </div>
 
       <div style={{ marginBottom: '2rem' }}>
@@ -115,8 +161,9 @@ interface WizardDemoPaneProps {
 }
 
 function WizardDemoPane({ heading, description, context }: WizardDemoPaneProps) {
-  const { self, panes } = context;
+  const { self, panes, windowSize, windowStartIndex } = context;
   const visiblePeers = panes.filter(pane => pane.id !== self.id && pane.isVisible);
+  const windowLabel = `${windowStartIndex + 1} - ${windowStartIndex + windowSize}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -129,6 +176,8 @@ function WizardDemoPane({ heading, description, context }: WizardDemoPaneProps) 
         <WizardDemoBadge label="Active" value={self.isActive ? 'Yes' : 'No'} />
         <WizardDemoBadge label="On Screen" value={self.isVisible ? 'Yes' : 'No'} />
         <WizardDemoBadge label="Reachable" value={self.isReachable ? 'Yes' : 'No'} />
+        <WizardDemoBadge label="Window" value={`${windowSize} pane${windowSize > 1 ? 's' : ''}`} />
+        <WizardDemoBadge label="Indices" value={windowLabel} />
         <WizardDemoBadge label="DOM Ready" value={self.element ? 'Yes' : 'No'} />
       </div>
 
@@ -156,7 +205,7 @@ function WizardDemoPane({ heading, description, context }: WizardDemoPaneProps) 
             }}
           >
             {peer.title}
-            {peer.id === self.id ? ' (current)' : peer.isVisible ? ' • visible' : ''}
+            {peer.isActive ? ' • in view' : peer.isReachable ? ' • near' : ''}
           </button>
         ))}
       </div>

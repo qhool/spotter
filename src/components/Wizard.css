@@ -24,7 +24,8 @@
 }
 
 .wizard-pane {
-  flex: 0 0 100%;
+  flex: 0 0 var(--wizard-pane-width, 100%);
+  max-width: var(--wizard-pane-width, 100%);
   box-sizing: border-box;
   padding: 1.5rem;
   background: rgba(18, 18, 18, 0.8);
@@ -44,6 +45,10 @@
 .wizard-pane.is-active {
   transform: scale(1);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.wizard-pane.is-reachable:not(.is-visible) {
+  opacity: 0.4;
 }
 
 .wizard-pane.is-left {
