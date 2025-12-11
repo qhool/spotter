@@ -6,6 +6,7 @@ import './HamburgerMenu.css';
 interface HamburgerMenuProps {
   sdk: SpotifyApi;
   onTestbedClick: () => void;
+  onMainAppClick?: () => void;
 }
 
 interface UserProfile {
@@ -15,7 +16,7 @@ interface UserProfile {
   followers?: { total: number };
 }
 
-export function HamburgerMenu({ sdk, onTestbedClick }: HamburgerMenuProps) {
+export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: HamburgerMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -64,8 +65,10 @@ export function HamburgerMenu({ sdk, onTestbedClick }: HamburgerMenuProps) {
     window.location.reload();
   };
 
-  const handleTestbedClick = () => {
-    onTestbedClick();
+  const handleMenuNavigation = (callback?: () => void) => {
+    if (callback) {
+      callback();
+    }
     setIsOpen(false);
   };
 
@@ -118,9 +121,18 @@ export function HamburgerMenu({ sdk, onTestbedClick }: HamburgerMenuProps) {
 
           {/* Menu Items */}
           <div className="menu-items">
+            {onMainAppClick && (
+              <button 
+                className="menu-item"
+                onClick={() => handleMenuNavigation(onMainAppClick)}
+              >
+                <Menu className="menu-icon" />
+                Main App
+              </button>
+            )}
             <button 
               className="menu-item testbed-item"
-              onClick={handleTestbedClick}
+              onClick={() => handleMenuNavigation(onTestbedClick)}
             >
               <TestTubeSolid className="menu-icon" />
               Scary Testing Page

@@ -90,6 +90,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           <HamburgerMenu 
             sdk={sdk}
             onTestbedClick={() => setCurrentPage('testbed')}
+            onMainAppClick={() => setCurrentPage('select-items')}
           />
           <div className="nav-title">Spotter</div>
         </div>
@@ -131,10 +132,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           />
         )}
         {currentPage === 'testbed' && (
-          <TestbedPage 
-            sdk={sdk} 
-            onBackToApp={() => setCurrentPage('select-items')}
-          />
+          <TestbedPage />
         )}
       </main>
     </div>
