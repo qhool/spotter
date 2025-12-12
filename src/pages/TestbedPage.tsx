@@ -1,7 +1,10 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/Wizard';
 import { SearchPane } from '../components/SearchPane';
+import { TrackContainer } from '../data/TrackContainer';
+import { PlusCircle } from 'iconoir-react';
+import { SelectedItemsPane } from '../components/SelectedItemsPane';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
@@ -9,11 +12,38 @@ interface TestbedPageProps {
 
 export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoWindowSize, setDemoWindowSize] = useState(1);
+  const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
+
+  const handleAddSelectedItem = useCallback((item: TrackContainer<any>) => {
+    setSelectedItems(prev => {
+      if (prev.some(existing => existing.id === item.id)) {
+        return prev;
+      }
+      return [...prev, item];
+    });
+  }, []);
+
+  const handleRemoveSelectedItem = useCallback((itemId: string) => {
+    setSelectedItems(prev => prev.filter(item => item.id !== itemId));
+  }, []);
+
+  const renderSearchControls = useCallback(
+    (item: TrackContainer<any>) => (
+      <button
+        className="control-button add-button"
+        onClick={() => handleAddSelectedItem(item)}
+        aria-label={`Add ${item.name} to selection`}
+      >
+        <PlusCircle />
+      </button>
+    ),
+    [handleAddSelectedItem]
+  );
   const baseViewTitles = useMemo<WizardViewTitles>(
     () => ({
-      1: ['Select Items', 'Remix', 'Export'],
-      2: ['Select + Remix', 'Remix + Export'],
-      3: ['Production Flow']
+      1: ['Search', 'Selected Items', 'Remix', 'Export'],
+      2: ['Search + Selected', 'Selected + Remix', 'Remix + Export'],
+      3: ['Search + Selected + Remix', 'Selected + Remix + Export']
     }),
     []
   );
@@ -34,9 +64,39 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
   const wizardPanes = useMemo<WizardPane[]>(
     () => [
       {
-        id: 'select-items',
-        title: 'Select Items',
-        render: () => <SearchPane sdk={sdk} />
+        id: 'search',
+        title: 'Search',
+        render: () => (
+          <div className="select-items-container">
+            <div className="content-area">
+              <div className="left-panel">
+                <SearchPane
+                  sdk={sdk}
+                  selectedItems={selectedItems}
+                  renderControls={renderSearchControls}
+                />
+              </div>
+            </div>
+          </div>
+        )
+      },
+      {
+        id: 'selected-items',
+        title: 'Selected Items',
+        render: () => (
+          <div className="select-items-container">
+            <div className="content-area">
+              <div className="right-panel">
+                <SelectedItemsPane
+                  items={selectedItems}
+                  onRemoveItem={handleRemoveSelectedItem}
+                  title="Selected Items"
+                  emptyMessage="Add playlists or albums from the search results"
+                />
+              </div>
+            </div>
+          </div>
+        )
       },
       {
         id: 'remix',
@@ -67,7 +127,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
         )
       }
     ],
-    [sdk]
+    [sdk, selectedItems, renderSearchControls, handleRemoveSelectedItem]
   );
 
   return (
