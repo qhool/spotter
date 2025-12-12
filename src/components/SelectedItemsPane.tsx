@@ -22,7 +22,7 @@ export function SelectedItemsPane({
   emptyMessage = 'No items selected',
   className = ''
 }: SelectedItemsPaneProps) {
-  const classes = ['selected-items-pane', 'playlist-container'];
+  const classes = ['selected-items-pane'];
   if (className) {
     classes.push(className);
   }
@@ -38,28 +38,30 @@ export function SelectedItemsPane({
         </div>
       )}
 
-      {items.length === 0 ? (
-        <div className="selected-items-pane__empty">{emptyMessage}</div>
-      ) : (
-        <div className="selected-items-pane__list">
-          {items.map(item => (
-            <ItemTile
-              key={item.id}
-              item={item}
-              contentType={toContentType(item)}
-              controls={
-                <button
-                  className="control-button remove-button"
-                  onClick={() => onRemoveItem(item.id)}
-                  aria-label={`Remove ${item.name}`}
-                >
-                  <TrashSolid />
-                </button>
-              }
-            />
-          ))}
-        </div>
-      )}
+      <div className="selected-items-pane__body playlist-container">
+        {items.length === 0 ? (
+          <div className="selected-items-pane__empty">{emptyMessage}</div>
+        ) : (
+          <div className="selected-items-pane__list">
+            {items.map(item => (
+              <ItemTile
+                key={item.id}
+                item={item}
+                contentType={toContentType(item)}
+                controls={
+                  <button
+                    className="control-button remove-button"
+                    onClick={() => onRemoveItem(item.id)}
+                    aria-label={`Remove ${item.name}`}
+                  >
+                    <TrashSolid />
+                  </button>
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

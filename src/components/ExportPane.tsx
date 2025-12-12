@@ -53,10 +53,13 @@ export function ExportPane({
     window.open(`https://open.spotify.com/playlist/${lastCreatedPlaylistId}`, '_blank');
   };
 
+  const trackCountLabel = filteredTrackCount === null
+    ? 'Export tracks to'
+    : `Export ${filteredTrackCount} track${filteredTrackCount === 1 ? '' : 's'} to`;
+
   if (!hasRemix) {
     return (
       <div className="export-pane">
-        <h3 className="export-pane__title">Export Options</h3>
         <div className="no-export">
           <p>Create a remix first to enable export options.</p>
         </div>
@@ -66,18 +69,10 @@ export function ExportPane({
 
   return (
     <div className="export-pane">
-      <h3 className="export-pane__title">Export Options</h3>
-
       <div className="export-options">
-        <div className="export-info">
-          <p className="track-count">
-            {filteredTrackCount !== null ? `${filteredTrackCount} tracks selected for export` : 'Loading track count...'}
-          </p>
-        </div>
-
-        <div className="export-group">
-          <label className="control-label" htmlFor="export-format">
-            Format
+        <div className="export-pane__format-row">
+          <label className="export-pane__format-label" htmlFor="export-format">
+            {trackCountLabel}
           </label>
           <select
             id="export-format"
