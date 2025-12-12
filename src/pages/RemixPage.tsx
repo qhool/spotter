@@ -1,10 +1,8 @@
 import { ItemTile, ContentType } from '../components/ItemTile';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
-import { TrackList } from '../components/TrackList';
 import { RemixOptions, RemixMethod } from '../data/RemixFunctions';
-import { RefreshCircleSolid } from 'iconoir-react';
-import { useState } from 'react';
+import { TrackListPane } from '../components/TrackListPane';
 
 interface RemixPageProps {
   selectedItems: TrackContainer[];
@@ -17,17 +15,7 @@ interface RemixPageProps {
 }
 
 export function RemixPage({ selectedItems, setSelectedItems, remixContainer, remixMethod, setRemixMethod, excludedTrackIds, setExcludedTrackIds }: RemixPageProps) {
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
   console.log("RemixPage render - remixContainer:", remixContainer, "selectedItems:", selectedItems.length);
-
-  // Helper function to refresh remix
-  const handleRefreshRemix = async () => {
-    if (remixContainer) {
-      await remixContainer.clearRemixCache();
-      setRefreshCounter(prev => prev + 1);
-    }
-  };
 
   // Helper functions for DragReorderContainer
   const getItemId = (item: TrackContainer) => item.id;
@@ -54,54 +42,13 @@ export function RemixPage({ selectedItems, setSelectedItems, remixContainer, rem
         </div>
 
         <div className="right-panel">
-          {/* Remix Controls */}
-          <div className="remix-controls">
-            <div className="remix-controls-group">
-              <label htmlFor="remix-method" className="control-label">
-                Remix Method
-              </label>
-              <select 
-                id="remix-method"
-                className="control-select"
-                value={remixMethod}
-                onChange={(e) => setRemixMethod(e.target.value as RemixMethod)}
-              >
-                <option value="shuffle">Shuffle</option>
-                <option value="concatenate">Concatenate</option>
-              </select>
-            </div>
-
-            {remixContainer && (
-              <button 
-                className="refresh-button"
-                onClick={handleRefreshRemix}
-                title="Refresh remix"
-              >
-                <RefreshCircleSolid className="refresh-icon" />
-                Refresh
-              </button>
-            )}
-          </div>
-
-          {/* Track List */}
-          <div className="track-list-area">
-            {remixContainer ? (
-              <div className="playlist-container">
-                <TrackList 
-                  trackContainer={remixContainer} 
-                  refreshTrigger={refreshCounter}
-                  excludedTrackIds={excludedTrackIds}
-                  setExcludedTrackIds={setExcludedTrackIds}
-                />
-              </div>
-            ) : (
-              <div className="playlist-container">
-                <div className="no-results">
-                  Select items to see remixed output
-                </div>
-              </div>
-            )}
-          </div>
+          <TrackListPane
+            remixContainer={remixContainer}
+            remixMethod={remixMethod}
+            setRemixMethod={setRemixMethod}
+            excludedTrackIds={excludedTrackIds}
+            setExcludedTrackIds={setExcludedTrackIds}
+          />
         </div>
       </div>
     </div>

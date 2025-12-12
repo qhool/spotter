@@ -52,6 +52,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .testbed-container {
@@ -62,22 +64,28 @@
   flex-direction: column;
   min-height: 0;
   width: 100%;
+  min-width: 0;
 }
 
 .testbed-wizard {
   flex: 1;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .testbed-wizard .wizard-track-outer {
   flex: 1;
-  display: flex;
   min-height: 0;
+  min-width: 0;
+  height: 100%;
 }
 
 .testbed-wizard .wizard-track {
-  flex: 1;
   min-height: 0;
+  min-width: 0;
+  height: 100%;
 }
 
 .testbed-wizard .wizard-pane {
@@ -138,6 +146,7 @@
   margin-bottom: 1rem;
   padding: 1rem;
   background-color: #1a1a1a;
+  box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid #333;
   flex-shrink: 0; /* Prevent controls from shrinking */
@@ -148,6 +157,8 @@
   display: flex;
   gap: 1rem;
   min-height: 0; /* Important for flex children to shrink */
+  min-width: 0; /* Allow children to shrink horizontally */
+  box-sizing: border-box;
 }
 
 .left-panel, .right-panel {
@@ -155,6 +166,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0; /* Important for flex children to shrink */
+  min-width: 0; /* Prevent content from forcing pane wider */
+  box-sizing: border-box;
 }
 
 /* Remix page specific styling */
@@ -265,6 +278,8 @@
   border-radius: 8px;
   background-color: #1a1a1a;
   min-height: 0; /* Important for scrolling */
+  min-width: 0; /* Allow content to wrap within pane */
+  box-sizing: border-box;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
@@ -437,24 +452,6 @@
   box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
 }
 
-/* Remix controls styling */
-.remix-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #333;
-  flex-shrink: 0;
-  gap: 1rem;
-}
-
-.remix-controls-group {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
 .control-label {
   font-weight: 600;
   font-size: 0.9rem;
@@ -481,34 +478,6 @@
   outline: none;
   border-color: #1db954;
   box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
-}
-
-.refresh-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 0.375rem;
-  color: #ffffff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.refresh-button:hover {
-  background-color: #3a3a3a;
-  border-color: #666;
-}
-
-.refresh-button:active {
-  background-color: #1a1a1a;
-}
-
-.refresh-button .refresh-icon {
-  width: 16px;
-  height: 16px;
 }
 
 .track-list-area {

@@ -5,6 +5,7 @@
   border-radius: 8px;
   background-color: #1a1a1a;
   position: relative;
+  min-width: 0;
 }
 
 .drag-item {

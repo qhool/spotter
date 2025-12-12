@@ -1,8 +1,11 @@
 .wizard {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  box-sizing: border-box;
 }
 
 .wizard-nav {
@@ -13,19 +16,26 @@
 .wizard-track-outer {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .wizard-track {
   display: flex;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   transition: transform 0.4s ease;
   will-change: transform;
 }
 
 .wizard-pane {
   flex: 0 0 var(--wizard-pane-width, 100%);
+  width: var(--wizard-pane-width, 100%);
   max-width: var(--wizard-pane-width, 100%);
+  min-width: 0;
   box-sizing: border-box;
   padding: 1.5rem;
   background: rgba(18, 18, 18, 0.8);
@@ -35,6 +45,7 @@
   pointer-events: none;
   transform: scale(0.98);
   transition: opacity 0.3s ease, transform 0.3s ease;
+  overflow: hidden;
 }
 
 .wizard-pane.is-visible {

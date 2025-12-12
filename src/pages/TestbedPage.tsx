@@ -1,10 +1,12 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/Wizard';
 import { SearchPane } from '../components/SearchPane';
-import { TrackContainer } from '../data/TrackContainer';
+import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { PlusCircle } from 'iconoir-react';
 import { SelectedItemsPane } from '../components/SelectedItemsPane';
+import { TrackListPane } from '../components/TrackListPane';
+import { RemixOptions, RemixMethod, getRemixFunction } from '../data/RemixFunctions';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
@@ -13,6 +15,32 @@ interface TestbedPageProps {
 export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoWindowSize, setDemoWindowSize] = useState(1);
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
+  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
+  const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(
+    null
+  );
+  const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (selectedItems.length === 0) {
+      setRemixContainer(null);
+      return;
+    }
+
+    const inputs: [TrackContainer<any>, RemixOptions][] = selectedItems.map(item => [
+      item,
+      {} as RemixOptions
+    ]);
+    const remixFunction = getRemixFunction(remixMethod);
+    const container = new RemixContainer(
+      sdk,
+      inputs,
+      remixFunction,
+      'Demo Remix',
+      `Combined tracks from ${selectedItems.length} source(s) - ${remixMethod}`
+    );
+    setRemixContainer(container);
+  }, [sdk, selectedItems, remixMethod]);
 
   const handleAddSelectedItem = useCallback((item: TrackContainer<any>) => {
     setSelectedItems(prev => {
@@ -41,9 +69,9 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
   );
   const baseViewTitles = useMemo<WizardViewTitles>(
     () => ({
-      1: ['Search', 'Selected Items', 'Remix', 'Export'],
-      2: ['Search + Selected', 'Selected + Remix', 'Remix + Export'],
-      3: ['Search + Selected + Remix', 'Selected + Remix + Export']
+      1: ['Search', 'Selected Items', 'Track List', 'Export'],
+      2: ['Search + Selected', 'Selected + Track List', 'Track List + Export'],
+      3: ['Search + Selected + Track List', 'Selected + Track List + Export']
     }),
     []
   );
@@ -99,15 +127,20 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
         )
       },
       {
-        id: 'remix',
-        title: 'Remix',
+        id: 'track-list',
+        title: 'Track List',
         render: () => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <h4 style={{ margin: 0 }}>Remix</h4>
-              <p style={{ margin: '0.25rem 0 0', color: '#b3b3b3' }}>
-                Blend tracks, adjust order, and audition transitions.
-              </p>
+          <div className="select-items-container remix-page">
+            <div className="content-area">
+              <div className="right-panel">
+                <TrackListPane
+                  remixContainer={remixContainer}
+                  remixMethod={remixMethod}
+                  setRemixMethod={setRemixMethod}
+                  excludedTrackIds={excludedTrackIds}
+                  setExcludedTrackIds={setExcludedTrackIds}
+                />
+              </div>
             </div>
           </div>
         )
@@ -127,7 +160,15 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
         )
       }
     ],
-    [sdk, selectedItems, renderSearchControls, handleRemoveSelectedItem]
+    [
+      sdk,
+      selectedItems,
+      renderSearchControls,
+      handleRemoveSelectedItem,
+      remixContainer,
+      remixMethod,
+      excludedTrackIds
+    ]
   );
 
   return (
@@ -156,7 +197,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
           />
           <span style={{ marginTop: '0.5rem', fontWeight: 600 }}>{demoWindowSize}</span>
         </div>
-        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+  <div style={{ flex: 1, minHeight: 0, minWidth: 0, display: 'flex', overflow: 'hidden' }}>
           <Wizard
             className="testbed-wizard"
             panes={wizardPanes}
