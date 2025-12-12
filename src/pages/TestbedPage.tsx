@@ -3,7 +3,6 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/Wizard';
 import { SearchPane } from '../components/SearchPane';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
-import { PlusCircle } from 'iconoir-react';
 import { SelectedItemsPane } from '../components/SelectedItemsPane';
 import { TrackListPane } from '../components/TrackListPane';
 import { RemixOptions, RemixMethod, getRemixFunction } from '../data/RemixFunctions';
@@ -18,6 +17,7 @@ interface TestbedPageProps {
 
 export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoWindowSize, setDemoWindowSize] = useState(1);
+  const [wizardWindowStart, setWizardWindowStart] = useState(0);
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
   const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(
@@ -108,19 +108,6 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
   const handleRemoveSelectedItem = useCallback((itemId: string) => {
     setSelectedItems(prev => prev.filter(item => item.id !== itemId));
   }, []);
-
-  const renderSearchControls = useCallback(
-    (item: TrackContainer<any>) => (
-      <button
-        className="control-button add-button"
-        onClick={() => handleAddSelectedItem(item)}
-        aria-label={`Add ${item.name} to selection`}
-      >
-        <PlusCircle />
-      </button>
-    ),
-    [handleAddSelectedItem]
-  );
 
   const createDemoProgressHandler = useCallback(
     (totalTracks: number): ProgressHandler => {
@@ -264,17 +251,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
         id: 'search',
         title: 'Search',
         render: () => (
-          <div className="select-items-container">
-            <div className="content-area">
-              <div className="left-panel">
-                <SearchPane
-                  sdk={sdk}
-                  selectedItems={selectedItems}
-                  renderControls={renderSearchControls}
-                />
-              </div>
-            </div>
-          </div>
+          <SearchPane sdk={sdk} selectedItems={selectedItems} onAddItem={handleAddSelectedItem} />
         )
       },
       {
@@ -290,6 +267,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
                   onRemoveItem={handleRemoveSelectedItem}
                   title="Selected Items"
                   emptyMessage="Add playlists or albums from the search results"
+                  disableDragToDelete={wizardWindowStart !== 0}
                 />
               </div>
             </div>
@@ -346,7 +324,6 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
     [
       sdk,
       selectedItems,
-      renderSearchControls,
       handleRemoveSelectedItem,
       remixContainer,
       remixMethod,
@@ -360,9 +337,14 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
       handleDemoExport,
       demoLastCreatedPlaylistId,
       handleDemoPlaylistNameChange,
-      handleDemoPlaylistDescriptionChange
+      handleDemoPlaylistDescriptionChange,
+      wizardWindowStart
     ]
   );
+
+  const handleWizardIndexChange = useCallback((index: number) => {
+    setWizardWindowStart(index);
+  }, []);
 
   return (
     <div className="testbed-container">
@@ -407,6 +389,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
             panes={wizardPanes}
             visibleRange={1}
             viewTitles={wizardViewTitles}
+            onIndexChange={handleWizardIndexChange}
           />
         </div>
       </div>

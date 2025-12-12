@@ -1,5 +1,6 @@
-import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { PlusCircle } from 'iconoir-react';
 import { ItemTile, ContentType } from './ItemTile';
 import { ButtonTile } from './ButtonTile';
 import './SearchPane.css';
@@ -12,10 +13,10 @@ import {
 
 export interface SearchPaneProps {
   sdk: SpotifyApi;
+  onAddItem: (item: TrackContainer<any>) => void;
   initialContentType?: ContentType;
   initialShowMyItems?: boolean;
   selectedItems?: TrackContainer<any>[];
-  renderControls?: (item: TrackContainer<any>) => ReactNode;
 }
 
 type SearchPage = {
@@ -27,10 +28,10 @@ type SearchPage = {
 
 export function SearchPane({
   sdk,
+  onAddItem,
   initialContentType = 'playlist',
   initialShowMyItems = true,
-  selectedItems = [],
-  renderControls
+  selectedItems = []
 }: SearchPaneProps) {
   const [contentType, setContentType] = useState<ContentType>(initialContentType);
   const [showMyItems, setShowMyItems] = useState(initialShowMyItems);
@@ -171,12 +172,32 @@ export function SearchPane({
     ? Math.max(0, searchResults.total - (searchResults.offset + searchResults.limit))
     : 0;
 
+  const handleAddItem = useCallback(
+    (item: TrackContainer<any>) => {
+      if (selectedIds.has(item.id)) {
+        return;
+      }
+      onAddItem(item);
+    },
+    [onAddItem, selectedIds]
+  );
+
   const itemTiles = filteredItems.map(item => (
     <ItemTile
       key={item.id}
       item={item}
       contentType={contentType}
-      controls={renderControls ? renderControls(item) : undefined}
+      controls={
+        <button
+          className="control-button add-button"
+          onClick={() => handleAddItem(item)}
+          aria-label={`Add ${item.name} to selection`}
+          disabled={selectedIds.has(item.id)}
+          title={selectedIds.has(item.id) ? 'Already added' : `Add ${item.name}`}
+        >
+          <PlusCircle />
+        </button>
+      }
     />
   ));
 
@@ -193,7 +214,7 @@ export function SearchPane({
 
   const hasResults = itemTiles.length > 0;
 
-  return (
+  const searchContent = (
     <div className="search-pane">
       <div className="controls">
         <label className="toggle-label">
@@ -240,6 +261,14 @@ export function SearchPane({
           )}
         </div>
       )}
+    </div>
+  );
+
+  return (
+    <div className="select-items-container">
+      <div className="content-area">
+        <div className="left-panel">{searchContent}</div>
+      </div>
     </div>
   );
 }
