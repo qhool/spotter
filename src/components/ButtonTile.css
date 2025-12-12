@@ -1,0 +1,29 @@
+.button-tile {
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  background-color: #1a1a1a;
+  border: 2px dashed #404040;
+  transition: all 0.2s ease;
+}
+
+.button-tile:hover:not(.disabled) {
+  background-color: #333333;
+  border-color: #666666;
+}
+
+.button-tile.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button-tile-content {
+  text-align: center;
+  width: 100%;
+}
+
+.button-tile-text {
+  font-size: 1rem;
+  color: #cccccc;
+  font-weight: 500;
+}

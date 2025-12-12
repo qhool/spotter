@@ -2,6 +2,7 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { ItemTile, ContentType } from './ItemTile';
 import { ButtonTile } from './ButtonTile';
+import './SearchPane.css';
 import {
   TrackContainer,
   PlaylistContainer,

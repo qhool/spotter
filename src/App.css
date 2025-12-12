@@ -36,7 +36,6 @@
   align-items: center;
   flex: 1;
 }
-
 .nav-title {
   font-size: 1.5rem;
   font-weight: bold;
@@ -142,20 +141,6 @@
   border-radius: 8px;
   border: 1px solid #333;
   flex-shrink: 0; /* Prevent controls from shrinking */
-}
-
-.search-pane {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  height: 100%;
-  min-height: 0;
-}
-
-.search-pane > .loading,
-.search-pane > .playlist-container {
-  flex: 1;
-  min-height: 0;
 }
 
 .content-area {

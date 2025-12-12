@@ -1,4 +1,5 @@
 import './ItemTile.css';
+import './ButtonTile.css';
 
 interface ButtonTileProps {
   name: string;
