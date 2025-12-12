@@ -7,6 +7,10 @@ import { PlusCircle } from 'iconoir-react';
 import { SelectedItemsPane } from '../components/SelectedItemsPane';
 import { TrackListPane } from '../components/TrackListPane';
 import { RemixOptions, RemixMethod, getRemixFunction } from '../data/RemixFunctions';
+import { ExportPane, ExportPaneExportType } from '../components/ExportPane';
+import { ExportProgressOverlay } from '../components/ExportProgressOverlay';
+import { ExportController, ProgressHandler } from '../data/ExportController';
+import { JSONExportTarget, PlaylistExportTarget } from '../data/Exporters';
 
 interface TestbedPageProps {
   sdk: SpotifyApi;
@@ -20,6 +24,21 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
     null
   );
   const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(() => new Set());
+  const [demoExportType, setDemoExportType] = useState<ExportPaneExportType>('playlist');
+  const [demoPlaylistName, setDemoPlaylistName] = useState('Spotter Demo Playlist');
+  const [demoPlaylistDescription, setDemoPlaylistDescription] = useState(
+    'Generated inside the Testbed wizard'
+  );
+  const [demoFilteredTrackCount, setDemoFilteredTrackCount] = useState<number | null>(null);
+  const [isDemoExporting, setIsDemoExporting] = useState(false);
+  const [demoLastCreatedPlaylistId, setDemoLastCreatedPlaylistId] = useState<string | null>(null);
+  const [demoProgressDescription, setDemoProgressDescription] = useState('');
+  const [demoProgressCompleted, setDemoProgressCompleted] = useState(0);
+  const [demoProgressTracksProcessed, setDemoProgressTracksProcessed] = useState(0);
+  const [demoProgressTotalTracks, setDemoProgressTotalTracks] = useState(0);
+  const [isDemoExportCompleted, setIsDemoExportCompleted] = useState(false);
+  const [demoCompletionMessage, setDemoCompletionMessage] = useState('');
+  const [demoCompletionSpotifyId, setDemoCompletionSpotifyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedItems.length === 0) {
@@ -41,6 +60,41 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
     );
     setRemixContainer(container);
   }, [sdk, selectedItems, remixMethod]);
+
+  const getDemoFilteredTracks = useCallback(async () => {
+    if (!remixContainer) {
+      return [];
+    }
+    const response = await remixContainer.getTracks(-1);
+    return response.items.filter(track => !excludedTrackIds.has(track.id));
+  }, [excludedTrackIds, remixContainer]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const updateFilteredTrackCount = async () => {
+      if (!remixContainer) {
+        if (!cancelled) {
+          setDemoFilteredTrackCount(null);
+        }
+        return;
+      }
+      try {
+        const filteredTracks = await getDemoFilteredTracks();
+        if (!cancelled) {
+          setDemoFilteredTrackCount(filteredTracks.length);
+        }
+      } catch (error) {
+        console.error('Testbed: failed to count filtered tracks', error);
+        if (!cancelled) {
+          setDemoFilteredTrackCount(null);
+        }
+      }
+    };
+    updateFilteredTrackCount();
+    return () => {
+      cancelled = true;
+    };
+  }, [getDemoFilteredTracks, remixContainer]);
 
   const handleAddSelectedItem = useCallback((item: TrackContainer<any>) => {
     setSelectedItems(prev => {
@@ -67,6 +121,121 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
     ),
     [handleAddSelectedItem]
   );
+
+  const createDemoProgressHandler = useCallback(
+    (totalTracks: number): ProgressHandler => {
+      return (description: string, completed: number, numberProcessed: number) => {
+        setDemoProgressDescription(description);
+        setDemoProgressCompleted(completed);
+        setDemoProgressTracksProcessed(numberProcessed);
+        setDemoProgressTotalTracks(totalTracks);
+      };
+    },
+    []
+  );
+
+  const handleDemoDismissCompletion = useCallback(() => {
+    setIsDemoExportCompleted(false);
+    setIsDemoExporting(false);
+    setDemoCompletionMessage('');
+    setDemoCompletionSpotifyId(null);
+    setDemoProgressDescription('');
+    setDemoProgressCompleted(0);
+    setDemoProgressTracksProcessed(0);
+    setDemoProgressTotalTracks(0);
+  }, []);
+
+  const handleDemoPlaylistNameChange = useCallback((value: string) => {
+    setDemoPlaylistName(value);
+    setDemoLastCreatedPlaylistId(null);
+  }, []);
+
+  const handleDemoPlaylistDescriptionChange = useCallback((value: string) => {
+    setDemoPlaylistDescription(value);
+  }, []);
+
+  const demoExportActionLabel = useMemo(() => {
+    if (isDemoExporting) {
+      return 'Exporting...';
+    }
+    return demoExportType === 'json' ? 'Download JSON' : 'Create Playlist';
+  }, [demoExportType, isDemoExporting]);
+
+  const handleDemoExport = useCallback(async () => {
+    if (!remixContainer) {
+      return;
+    }
+
+    setIsDemoExporting(true);
+    try {
+      const filteredTracks = await getDemoFilteredTracks();
+      const progressHandler = createDemoProgressHandler(filteredTracks.length);
+
+      if (demoExportType === 'json') {
+        const jsonTarget = new JSONExportTarget();
+        const controller = new ExportController(jsonTarget, 3, progressHandler);
+
+        await controller.append(filteredTracks);
+        const jsonData = await jsonTarget.getData();
+
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${demoPlaylistName.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+
+        setDemoCompletionMessage(`Successfully exported ${filteredTracks.length} tracks to JSON file`);
+        setDemoCompletionSpotifyId(null);
+        setIsDemoExportCompleted(true);
+      } else {
+        const playlistTarget = new PlaylistExportTarget(sdk, {
+          name: demoPlaylistName,
+          description: demoPlaylistDescription
+        });
+        const controller = new ExportController(playlistTarget, 5, progressHandler);
+
+        await controller.append(filteredTracks);
+        const playlistId = playlistTarget.getPlaylistId();
+        setDemoLastCreatedPlaylistId(playlistId);
+        setDemoCompletionMessage(
+          `Created playlist "${demoPlaylistName}" with ${filteredTracks.length} tracks`
+        );
+        setDemoCompletionSpotifyId(playlistId);
+        setIsDemoExportCompleted(true);
+      }
+    } catch (error) {
+      console.error('Testbed export failed:', error);
+      let errorMessage = 'Export failed. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('playlist')) {
+          errorMessage = 'Failed to create playlist. Please check your Spotify permissions and try again.';
+        } else if (error.message.includes('track')) {
+          errorMessage = 'Failed to add tracks to playlist. Some tracks may not be available.';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        }
+      }
+      alert(errorMessage);
+      setIsDemoExporting(false);
+      setIsDemoExportCompleted(false);
+      setDemoProgressDescription('');
+      setDemoProgressCompleted(0);
+      setDemoProgressTracksProcessed(0);
+      setDemoProgressTotalTracks(0);
+    }
+  }, [
+    createDemoProgressHandler,
+    demoExportType,
+    demoPlaylistDescription,
+    demoPlaylistName,
+    getDemoFilteredTracks,
+    remixContainer,
+    sdk
+  ]);
   const baseViewTitles = useMemo<WizardViewTitles>(
     () => ({
       1: ['Search', 'Selected Items', 'Track List', 'Export'],
@@ -149,12 +318,25 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
         id: 'export',
         title: 'Export',
         render: () => (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div>
-              <h4 style={{ margin: 0 }}>Export</h4>
-              <p style={{ margin: '0.25rem 0 0', color: '#b3b3b3' }}>
-                Send finished playlists back to Spotify or share externally.
-              </p>
+          <div className="select-items-container">
+            <div className="content-area">
+              <div className="right-panel">
+                <ExportPane
+                  hasRemix={Boolean(remixContainer)}
+                  filteredTrackCount={demoFilteredTrackCount}
+                  exportType={demoExportType}
+                  playlistName={demoPlaylistName}
+                  playlistDescription={demoPlaylistDescription}
+                  lastCreatedPlaylistId={demoLastCreatedPlaylistId}
+                  isExporting={isDemoExporting}
+                  actionButtonLabel={demoExportActionLabel}
+                  disableExportButton={demoFilteredTrackCount === 0}
+                  onExportTypeChange={setDemoExportType}
+                  onPlaylistNameChange={handleDemoPlaylistNameChange}
+                  onPlaylistDescriptionChange={handleDemoPlaylistDescriptionChange}
+                  onExport={handleDemoExport}
+                />
+              </div>
             </div>
           </div>
         )
@@ -167,12 +349,33 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
       handleRemoveSelectedItem,
       remixContainer,
       remixMethod,
-      excludedTrackIds
+      excludedTrackIds,
+      demoFilteredTrackCount,
+      demoExportType,
+      demoPlaylistName,
+      demoPlaylistDescription,
+      isDemoExporting,
+      demoExportActionLabel,
+      handleDemoExport,
+      demoLastCreatedPlaylistId,
+      handleDemoPlaylistNameChange,
+      handleDemoPlaylistDescriptionChange
     ]
   );
 
   return (
     <div className="testbed-container">
+      <ExportProgressOverlay
+        description={demoProgressDescription}
+        completed={demoProgressCompleted}
+        tracksProcessed={demoProgressTracksProcessed}
+        totalTracks={demoProgressTotalTracks}
+        isVisible={isDemoExporting || isDemoExportCompleted}
+        isCompleted={isDemoExportCompleted}
+        completionMessage={demoCompletionMessage}
+        spotifyPlaylistId={demoCompletionSpotifyId ?? undefined}
+        onDismiss={handleDemoDismissCompletion}
+      />
       <div style={{ flex: 1, display: 'flex', gap: '1.5rem', minHeight: 0 }}>
         <div
           style={{
