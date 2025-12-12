@@ -286,6 +286,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
               <div className="right-panel">
                 <SelectedItemsPane
                   items={selectedItems}
+                  setItems={setSelectedItems}
                   onRemoveItem={handleRemoveSelectedItem}
                   title="Selected Items"
                   emptyMessage="Add playlists or albums from the search results"

@@ -1,15 +1,18 @@
-import { ReactNode } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { TrackContainer } from '../data/TrackContainer';
 import { ItemTile, ContentType } from './ItemTile';
 import { TrashSolid } from 'iconoir-react';
+import { DragReorderContainer } from './DragReorderContainer';
 import './SelectedItemsPane.css';
 
 interface SelectedItemsPaneProps {
   items: TrackContainer<any>[];
+  setItems: (items: TrackContainer<any>[]) => void;
   onRemoveItem: (itemId: string) => void;
   title?: string;
   emptyMessage?: ReactNode;
   className?: string;
+  disableDragToDelete?: boolean;
 }
 
 const toContentType = (item: TrackContainer<any>): ContentType =>
@@ -17,15 +20,39 @@ const toContentType = (item: TrackContainer<any>): ContentType =>
 
 export function SelectedItemsPane({
   items,
+  setItems,
   onRemoveItem,
   title,
   emptyMessage = 'No items selected',
-  className = ''
+  className = '',
+  disableDragToDelete = true
 }: SelectedItemsPaneProps) {
   const classes = ['selected-items-pane'];
   if (className) {
     classes.push(className);
   }
+
+  const getItemId = useCallback((item: TrackContainer<any>) => item.id, []);
+
+  const renderSelectedItem = useCallback(
+    (item: TrackContainer<any>) => (
+      <ItemTile
+        key={item.id}
+        item={item}
+        contentType={toContentType(item)}
+        controls={
+          <button
+            className="control-button remove-button"
+            onClick={() => onRemoveItem(item.id)}
+            aria-label={`Remove ${item.name}`}
+          >
+            <TrashSolid />
+          </button>
+        }
+      />
+    ),
+    [onRemoveItem]
+  );
 
   return (
     <div className={classes.join(' ')}>
@@ -38,29 +65,21 @@ export function SelectedItemsPane({
         </div>
       )}
 
-      <div className="selected-items-pane__body playlist-container">
-        {items.length === 0 ? (
-          <div className="selected-items-pane__empty">{emptyMessage}</div>
-        ) : (
-          <div className="selected-items-pane__list">
-            {items.map(item => (
-              <ItemTile
-                key={item.id}
-                item={item}
-                contentType={toContentType(item)}
-                controls={
-                  <button
-                    className="control-button remove-button"
-                    onClick={() => onRemoveItem(item.id)}
-                    aria-label={`Remove ${item.name}`}
-                  >
-                    <TrashSolid />
-                  </button>
-                }
-              />
-            ))}
-          </div>
-        )}
+      <div className="selected-items-pane__body">
+        <div className="playlist-container selected-items-pane__list-wrapper">
+          {items.length === 0 ? (
+            <div className="selected-items-pane__empty">{emptyMessage}</div>
+          ) : (
+            <DragReorderContainer
+              items={items}
+              setItems={setItems}
+              getItemId={getItemId}
+              renderItem={renderSelectedItem}
+              className="selected-items-pane__drag-container"
+              disableDragToDelete={disableDragToDelete}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
