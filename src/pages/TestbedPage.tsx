@@ -1,13 +1,14 @@
+import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState, useMemo } from 'react';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/Wizard';
 import { SearchPane } from '../components/SearchPane';
 
-export function TestbedPage() {
+interface TestbedPageProps {
+  sdk: SpotifyApi;
+}
+
+export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoWindowSize, setDemoWindowSize] = useState(1);
-  const [searchDemoQuery, setSearchDemoQuery] = useState('');
-  const [searchDemoType, setSearchDemoType] = useState<'playlist' | 'album'>('playlist');
-  const [searchDemoMyItems, setSearchDemoMyItems] = useState(true);
-  const [searchDemoItems, setSearchDemoItems] = useState<JSX.Element[]>([]);
   const baseViewTitles = useMemo<WizardViewTitles>(
     () => ({
       1: ['Select Items', 'Remix', 'Export'],
@@ -35,27 +36,7 @@ export function TestbedPage() {
       {
         id: 'select-items',
         title: 'Select Items',
-        render: () => (
-          <SearchPane
-            contentType={searchDemoType}
-            showMyItems={searchDemoMyItems}
-            searchQuery={searchDemoQuery}
-            loading={false}
-            itemTiles={searchDemoItems}
-            onToggleMyItems={checked => setSearchDemoMyItems(checked)}
-            onContentTypeChange={value => setSearchDemoType(value)}
-            onSearchQueryChange={value => setSearchDemoQuery(value)}
-            onSearchSubmit={event => {
-              event.preventDefault();
-              setSearchDemoMyItems(false);
-              setSearchDemoItems([
-                <div key="demo-result" className="no-results">
-                  Pretend search for "{searchDemoQuery}" ({searchDemoType}).
-                </div>
-              ]);
-            }}
-          />
-        )
+        render: () => <SearchPane sdk={sdk} />
       },
       {
         id: 'remix',
@@ -86,7 +67,7 @@ export function TestbedPage() {
         )
       }
     ],
-    [searchDemoItems, searchDemoMyItems, searchDemoQuery, searchDemoType]
+    [sdk]
   );
 
   return (

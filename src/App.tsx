@@ -132,7 +132,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           />
         )}
         {currentPage === 'testbed' && (
-          <TestbedPage />
+          <TestbedPage sdk={sdk} />
         )}
       </main>
     </div>
