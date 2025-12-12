@@ -2,7 +2,10 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 1.25rem;
   box-sizing: border-box;
@@ -18,6 +21,9 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -26,6 +32,8 @@
   display: flex;
   width: 100%;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
   box-sizing: border-box;
   transition: transform 0.4s ease;
   will-change: transform;
@@ -36,6 +44,10 @@
   width: var(--wizard-pane-width, 100%);
   max-width: var(--wizard-pane-width, 100%);
   min-width: 0;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   padding: 1.5rem;
   background: rgba(18, 18, 18, 0.8);
