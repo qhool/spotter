@@ -4,8 +4,8 @@ import { Wizard, WizardPane, WizardViewTitles } from '../components/Wizard';
 import { SearchPane } from '../components/SearchPane';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
 import { SelectedItemsPane } from '../components/SelectedItemsPane';
-import { TrackListPane } from '../components/TrackListPane';
-import { RemixOptions, RemixMethod, getRemixFunction } from '../data/RemixFunctions';
+import { RemixPane } from '../components/RemixPane';
+import { RemixOptions } from '../data/RemixFunctions';
 import { ExportPane, ExportPaneExportType } from '../components/ExportPane';
 import { ExportProgressOverlay } from '../components/ExportProgressOverlay';
 import { ExportController, ProgressHandler } from '../data/ExportController';
@@ -18,7 +18,6 @@ interface TestbedPageProps {
 export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoWindowSize, setDemoWindowSize] = useState(1);
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
-  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(
     null
   );
@@ -39,26 +38,12 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoCompletionMessage, setDemoCompletionMessage] = useState('');
   const [demoCompletionSpotifyId, setDemoCompletionSpotifyId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (selectedItems.length === 0) {
-      setRemixContainer(null);
-      return;
-    }
-
-    const inputs: [TrackContainer<any>, RemixOptions][] = selectedItems.map(item => [
-      item,
-      {} as RemixOptions
-    ]);
-    const remixFunction = getRemixFunction(remixMethod);
-    const container = new RemixContainer(
-      sdk,
-      inputs,
-      remixFunction,
-      'Demo Remix',
-      `Combined tracks from ${selectedItems.length} source(s) - ${remixMethod}`
-    );
-    setRemixContainer(container);
-  }, [sdk, selectedItems, remixMethod]);
+  const handleRemixContainerChange = useCallback(
+    (container: RemixContainer<RemixOptions> | null) => {
+      setRemixContainer(container);
+    },
+    []
+  );
 
   const getDemoFilteredTracks = useCallback(async () => {
     if (!remixContainer) {
@@ -273,19 +258,13 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
         id: 'track-list',
         title: 'Track List',
         render: () => (
-          <div className="select-items-container remix-page">
-            <div className="content-area">
-              <div className="right-panel">
-                <TrackListPane
-                  remixContainer={remixContainer}
-                  remixMethod={remixMethod}
-                  setRemixMethod={setRemixMethod}
-                  excludedTrackIds={excludedTrackIds}
-                  setExcludedTrackIds={setExcludedTrackIds}
-                />
-              </div>
-            </div>
-          </div>
+          <RemixPane
+            sdk={sdk}
+            selectedItems={selectedItems}
+            excludedTrackIds={excludedTrackIds}
+            setExcludedTrackIds={setExcludedTrackIds}
+            onRemixContainerChange={handleRemixContainerChange}
+          />
         )
       },
       {
@@ -319,10 +298,13 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
     [
       sdk,
       selectedItems,
+      handleAddSelectedItem,
+      setSelectedItems,
       handleRemoveSelectedItem,
-      remixContainer,
-      remixMethod,
       excludedTrackIds,
+      setExcludedTrackIds,
+      handleRemixContainerChange,
+      remixContainer,
       demoFilteredTrackCount,
       demoExportType,
       demoPlaylistName,
@@ -332,9 +314,7 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
       handleDemoExport,
       demoLastCreatedPlaylistId,
       handleDemoPlaylistNameChange,
-      handleDemoPlaylistDescriptionChange,
-      setSelectedItems,
-      handleRemoveSelectedItem
+      handleDemoPlaylistDescriptionChange
     ]
   );
 
