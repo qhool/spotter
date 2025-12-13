@@ -55,30 +55,36 @@ export function SelectedItemsPane({
   );
 
   return (
-    <div className={classes.join(' ')}>
-      {title && (
-        <div className="selected-items-pane__header">
-          <h3>{title}</h3>
-          {items.length > 0 && (
-            <span className="selected-items-pane__count">{items.length}</span>
-          )}
-        </div>
-      )}
+    <div className="select-items-container">
+      <div className="content-area">
+        <div className="right-panel">
+          <div className={classes.join(' ')}>
+            {title && (
+              <div className="selected-items-pane__header">
+                <h3>{title}</h3>
+                {items.length > 0 && (
+                  <span className="selected-items-pane__count">{items.length}</span>
+                )}
+              </div>
+            )}
 
-      <div className="selected-items-pane__body">
-        <div className="playlist-container selected-items-pane__list-wrapper">
-          {items.length === 0 ? (
-            <div className="selected-items-pane__empty">{emptyMessage}</div>
-          ) : (
-            <DragReorderContainer
-              items={items}
-              setItems={setItems}
-              getItemId={getItemId}
-              renderItem={renderSelectedItem}
-              className="selected-items-pane__drag-container"
-              disableDragToDelete={disableDragToDelete}
-            />
-          )}
+            <div className="selected-items-pane__body">
+              <div className="playlist-container selected-items-pane__list-wrapper">
+                {items.length === 0 ? (
+                  <div className="selected-items-pane__empty">{emptyMessage}</div>
+                ) : (
+                  <DragReorderContainer
+                    items={items}
+                    setItems={setItems}
+                    getItemId={getItemId}
+                    renderItem={renderSelectedItem}
+                    className="selected-items-pane__drag-container"
+                    disableDragToDelete={disableDragToDelete}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

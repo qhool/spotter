@@ -1,5 +1,6 @@
 import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SlideNav } from './SlideNav';
+import { ArrayMap } from '../data/ArrayMap';
 import './Wizard.css';
 
 const classNames = (...classes: Array<string | false | null | undefined>) =>
@@ -63,11 +64,12 @@ export interface WizardPaneHandle<TMeta = unknown> {
   windowStartIndex: number;
   windowEndIndex: number;
   goTo: () => void;
+  getId: () => string;
 }
 
 export interface WizardPaneRenderContext<TMeta = unknown> {
   self: WizardPaneHandle<TMeta>;
-  panes: WizardPaneHandle<TMeta>[];
+  panes: ArrayMap<WizardPaneHandle<TMeta>>;
   windowSize: number;
   windowStartIndex: number;
 }
@@ -310,9 +312,10 @@ export function Wizard<TMeta = unknown>({
     return () => observer.disconnect();
   }, [paneSignature, trackNode]);
 
-  const paneHandles = useMemo<WizardPaneHandle<TMeta>[]>(() => {
+  const paneHandles = useMemo<ArrayMap<WizardPaneHandle<TMeta>>>(() => {
     const windowEnd = activeWindowStart + windowSize - 1;
-    return panes.map((pane, index) => {
+    const handles = new ArrayMap<WizardPaneHandle<TMeta>>();
+    panes.forEach((pane, index) => {
       const isInWindow = index >= activeWindowStart && index <= windowEnd;
       const isLeftOfWindow = index < activeWindowStart;
       const isRightOfWindow = index > windowEnd;
@@ -323,7 +326,7 @@ export function Wizard<TMeta = unknown>({
         : index - windowEnd;
       const isReachable = isInWindow || distanceFromWindow <= visibleRange;
 
-      return {
+      const handle: WizardPaneHandle<TMeta> = {
         id: pane.id,
         title: pane.title,
         index,
@@ -337,16 +340,19 @@ export function Wizard<TMeta = unknown>({
         windowSize,
         windowStartIndex: activeWindowStart,
         windowEndIndex: windowEnd,
-        goTo: () => goToPane(index)
+        goTo: () => goToPane(index),
+        getId: () => pane.id
       };
+      handles.push(handle);
     });
+    return handles;
   }, [activeWindowStart, goToPane, paneVisibility, panes, visibleRange, windowSize]);
 
   useEffect(() => {
     if (paneCount === 0) {
       return;
     }
-    const activeHandle = paneHandles[activeWindowStart];
+    const activeHandle = paneHandles.at(activeWindowStart);
     if (activeHandle) {
       onIndexChange?.(activeWindowStart, activeHandle);
     }
@@ -376,7 +382,10 @@ export function Wizard<TMeta = unknown>({
           style={{ transform: `translateX(-${(activeWindowStart * 100) / windowSize}%)` }}
         >
           {panes.map((pane, index) => {
-            const handle = paneHandles[index];
+            const handle = paneHandles.at(index);
+            if (!handle) {
+              return null;
+            }
             return (
               <section
                 key={handle.id}

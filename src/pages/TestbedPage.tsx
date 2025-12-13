@@ -17,7 +17,6 @@ interface TestbedPageProps {
 
 export function TestbedPage({ sdk }: TestbedPageProps) {
   const [demoWindowSize, setDemoWindowSize] = useState(1);
-  const [wizardWindowStart, setWizardWindowStart] = useState(0);
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
   const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(
@@ -257,22 +256,18 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
       {
         id: 'selected-items',
         title: 'Selected Items',
-        render: () => (
-          <div className="select-items-container">
-            <div className="content-area">
-              <div className="right-panel">
-                <SelectedItemsPane
-                  items={selectedItems}
-                  setItems={setSelectedItems}
-                  onRemoveItem={handleRemoveSelectedItem}
-                  title="Selected Items"
-                  emptyMessage="Add playlists or albums from the search results"
-                  disableDragToDelete={wizardWindowStart !== 0}
-                />
-              </div>
-            </div>
-          </div>
-        )
+        render: ({ panes }) => {
+          return (
+            <SelectedItemsPane
+              items={selectedItems}
+              setItems={setSelectedItems}
+              onRemoveItem={handleRemoveSelectedItem}
+              title="Selected Items"
+              emptyMessage="Add playlists or albums from the search results"
+              disableDragToDelete={!panes.get('search')?.isVisible}
+            />
+          );
+        }
       },
       {
         id: 'track-list',
@@ -338,13 +333,10 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
       demoLastCreatedPlaylistId,
       handleDemoPlaylistNameChange,
       handleDemoPlaylistDescriptionChange,
-      wizardWindowStart
+      setSelectedItems,
+      handleRemoveSelectedItem
     ]
   );
-
-  const handleWizardIndexChange = useCallback((index: number) => {
-    setWizardWindowStart(index);
-  }, []);
 
   return (
     <div className="testbed-container">
@@ -389,7 +381,6 @@ export function TestbedPage({ sdk }: TestbedPageProps) {
             panes={wizardPanes}
             visibleRange={1}
             viewTitles={wizardViewTitles}
-            onIndexChange={handleWizardIndexChange}
           />
         </div>
       </div>

@@ -1,26 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import {
-  SelectedSet,
-  SelectedSetItem,
-  SelectedSetVersionState,
-  useSelectedSet
-} from '../data/SelectedSet';
+  ArrayMap,
+  ArrayMapItem,
+  ArrayMapVersionState,
+  useArrayMap
+} from '../data/ArrayMap';
 import { createElement, createRef, forwardRef, useImperativeHandle } from 'react';
 import { act } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-class MockItem implements SelectedSetItem {
+class MockItem implements ArrayMapItem {
   constructor(private id: string, public label: string = id) {}
   getId(): string {
     return this.id;
   }
 }
 
-describe('SelectedSet', () => {
+describe('ArrayMap', () => {
   it('preserves insertion order and list-style operations while tracking version', () => {
-    const set = new SelectedSet<MockItem>();
+    const set = new ArrayMap<MockItem>();
 
     const first = new MockItem('a', 'Alpha');
     const second = new MockItem('b', 'Beta');
@@ -71,7 +71,7 @@ describe('SelectedSet', () => {
 
   it('supports has/delete with consistent indexing and mutation notifications', () => {
   const notifications: number[] = [];
-    const set = new SelectedSet<MockItem>([
+    const set = new ArrayMap<MockItem>([
       new MockItem('a'),
       new MockItem('b'),
       new MockItem('c')
@@ -114,33 +114,33 @@ describe('SelectedSet', () => {
     expect(notifications.length).toBe(7);
   });
 
-  it('provides a useSelectedSet hook that exposes version state', () => {
+  it('provides a useArrayMap hook that exposes version state', () => {
     interface TestHandle {
       add: (id: string) => void;
       delete: (id: string) => void;
       clear: () => void;
       getVersion: () => number;
-      getVersionState: () => SelectedSetVersionState;
+      getVersionState: () => ArrayMapVersionState;
     }
 
     const Harness = forwardRef<TestHandle>((_, ref) => {
-      const { selectedSet, version, versionState } = useSelectedSet<MockItem>();
+      const { arrayMap, version, versionState } = useArrayMap<MockItem>();
       useImperativeHandle(
         ref,
         () => ({
           add: id => {
-            selectedSet.add(new MockItem(id));
+            arrayMap.add(new MockItem(id));
           },
           delete: id => {
-            selectedSet.delete(id);
+            arrayMap.delete(id);
           },
           clear: () => {
-            selectedSet.clear();
+            arrayMap.clear();
           },
           getVersion: () => version,
           getVersionState: () => versionState
         }),
-        [selectedSet, version, versionState]
+        [arrayMap, version, versionState]
       );
       return null;
     });

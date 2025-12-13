@@ -1,39 +1,39 @@
 import { Dispatch, SetStateAction, useMemo, useRef, useState } from 'react';
 
-export interface SelectedSetItem {
+export interface ArrayMapItem {
   /**
-   * Returns a stable identifier used to uniquely track the item inside a {@link SelectedSet}.
+   * Returns a stable identifier used to uniquely track the item inside an {@link ArrayMap}.
    */
   getId(): string;
 }
 
-interface SelectedSetOptions {
+interface ArrayMapOptions {
   onMutate?: () => void;
   notifyOnInitialLoad?: boolean;
 }
 
-export type SelectedSetVersionState = readonly [
+export type ArrayMapVersionState = readonly [
   number,
   Dispatch<SetStateAction<number>>
 ];
 
-export interface UseSelectedSetResult<T extends SelectedSetItem> {
-  selectedSet: SelectedSet<T>;
+export interface UseArrayMapResult<T extends ArrayMapItem> {
+  arrayMap: ArrayMap<T>;
   version: number;
-  versionState: SelectedSetVersionState;
+  versionState: ArrayMapVersionState;
 }
 
 /**
  * An ordered collection that maintains insertion order like a list while also providing
- * set-like membership helpers (has/delete) based on each item's {@link SelectedSetItem.getId}.
+ * set-like membership helpers (has/delete) based on each item's {@link ArrayMapItem.getId}.
  */
-export class SelectedSet<T extends SelectedSetItem> implements Iterable<T> {
+export class ArrayMap<T extends ArrayMapItem> implements Iterable<T> {
   private items: T[] = [];
   private indexById: Map<string, number> = new Map();
   private version = 0;
   private readonly onMutate?: () => void;
 
-  constructor(initialItems: Iterable<T> = [], options: SelectedSetOptions = {}) {
+  constructor(initialItems: Iterable<T> = [], options: ArrayMapOptions = {}) {
     this.onMutate = options.onMutate;
     const notifyOnInitialLoad = options.notifyOnInitialLoad ?? true;
     for (const item of initialItems) {
@@ -130,6 +130,15 @@ export class SelectedSet<T extends SelectedSetItem> implements Iterable<T> {
     return this.indexById.has(this.resolveId(itemOrId));
   }
 
+  get(itemOrId: T | string): T | undefined {
+    const id = this.resolveId(itemOrId);
+    const index = this.indexById.get(id);
+    if (index === undefined) {
+      return undefined;
+    }
+    return this.items[index];
+  }
+
   /**
    * Deletes the matching item (by id) and returns true if something was removed.
    */
@@ -174,7 +183,7 @@ export class SelectedSet<T extends SelectedSetItem> implements Iterable<T> {
   }
 
   /**
-   * Enables `for ... of` iteration over SelectedSet instances.
+   * Enables `for ... of` iteration over ArrayMap instances.
    */
   [Symbol.iterator](): Iterator<T> {
     return this.items[Symbol.iterator]();
@@ -196,27 +205,27 @@ export class SelectedSet<T extends SelectedSetItem> implements Iterable<T> {
   }
 }
 
-export function useSelectedSet<T extends SelectedSetItem>(
+export function useArrayMap<T extends ArrayMapItem>(
   initialItems: Iterable<T> = []
-): UseSelectedSetResult<T> {
+): UseArrayMapResult<T> {
   const [version, setVersion] = useState(0);
-  const setRef = useRef<SelectedSet<T>>();
+  const setRef = useRef<ArrayMap<T>>();
 
   if (!setRef.current) {
-    setRef.current = new SelectedSet(initialItems, {
+    setRef.current = new ArrayMap(initialItems, {
       onMutate: () => setVersion(prev => prev + 1),
       notifyOnInitialLoad: false
     });
   }
-  const selectedSet = setRef.current;
+  const arrayMap = setRef.current;
 
-  const versionState = useMemo<SelectedSetVersionState>(
+  const versionState = useMemo<ArrayMapVersionState>(
     () => [version, setVersion],
     [version, setVersion]
   );
 
   return {
-    selectedSet,
+    arrayMap,
     version,
     versionState
   };
