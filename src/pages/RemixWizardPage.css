@@ -1,0 +1,43 @@
+.remix-wizard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.remix-wizard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.remix-wizard-title-group h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.remix-wizard-title-group p {
+  margin: 0.25rem 0 0;
+  color: #b3b3b3;
+}
+
+.remix-wizard-controls {
+  min-height: 48px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.remix-wizard-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.remix-wizard {
+  flex: 1;
+}

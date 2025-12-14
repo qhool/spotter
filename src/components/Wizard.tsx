@@ -1,4 +1,5 @@
 import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { SlideNav } from './SlideNav';
 import { ArrayMap } from '../data/ArrayMap';
 import './Wizard.css';
@@ -81,6 +82,7 @@ export interface WizardProps<TMeta = unknown> {
   className?: string;
   navClassName?: string;
   navPosition?: 'top' | 'bottom';
+  navSlot?: Element | null;
   onIndexChange?: (index: number, pane: WizardPaneHandle<TMeta>) => void;
   viewTitles?: WizardViewTitles;
   responsiveBreakpoints?: WizardResponsiveBreakpoint[];
@@ -93,6 +95,7 @@ export function Wizard<TMeta = unknown>({
   className,
   navClassName,
   navPosition = 'top',
+  navSlot = null,
   onIndexChange,
   viewTitles,
   responsiveBreakpoints
@@ -373,53 +376,59 @@ export function Wizard<TMeta = unknown>({
     );
   };
 
+  const navContent = renderNav();
+  const shouldRenderInline = !navSlot;
+
   return (
-    <div className={classNames('wizard', className)}>
-      {navPosition === 'top' && renderNav()}
-      <div className="wizard-track-outer" ref={setTrackNode}>
-        <div
-          className="wizard-track"
-          style={{ transform: `translateX(-${(activeWindowStart * 100) / windowSize}%)` }}
-        >
-          {panes.map((pane, index) => {
-            const handle = paneHandles.at(index);
-            if (!handle) {
-              return null;
-            }
-            return (
-              <section
-                key={handle.id}
-                ref={(element: HTMLDivElement | null) => {
-                  paneRefs.current[index] = element;
-                }}
-                className={classNames(
-                  'wizard-pane',
-                  handle.isVisible && 'is-visible',
-                  handle.isReachable && 'is-reachable',
-                  handle.isActive && 'is-active',
-                  handle.isLeftOfActive && 'is-left',
-                  handle.isRightOfActive && 'is-right'
-                )}
-                style={{
-                  '--wizard-pane-width': `${100 / windowSize}%`
-                } as CSSProperties}
-                data-pane-id={handle.id}
-                data-pane-index={index}
-                data-visible={handle.isVisible}
-                data-active={handle.isActive}
-              >
-                {pane.render({
-                  self: handle,
-                  panes: paneHandles,
-                  windowSize,
-                  windowStartIndex: activeWindowStart
-                })}
-              </section>
-            );
-          })}
+    <>
+      <div className={classNames('wizard', className)}>
+        {shouldRenderInline && navPosition === 'top' && navContent}
+        <div className="wizard-track-outer" ref={setTrackNode}>
+          <div
+            className="wizard-track"
+            style={{ transform: `translateX(-${(activeWindowStart * 100) / windowSize}%)` }}
+          >
+            {panes.map((pane, index) => {
+              const handle = paneHandles.at(index);
+              if (!handle) {
+                return null;
+              }
+              return (
+                <section
+                  key={handle.id}
+                  ref={(element: HTMLDivElement | null) => {
+                    paneRefs.current[index] = element;
+                  }}
+                  className={classNames(
+                    'wizard-pane',
+                    handle.isVisible && 'is-visible',
+                    handle.isReachable && 'is-reachable',
+                    handle.isActive && 'is-active',
+                    handle.isLeftOfActive && 'is-left',
+                    handle.isRightOfActive && 'is-right'
+                  )}
+                  style={{
+                    '--wizard-pane-width': `${100 / windowSize}%`
+                  } as CSSProperties}
+                  data-pane-id={handle.id}
+                  data-pane-index={index}
+                  data-visible={handle.isVisible}
+                  data-active={handle.isActive}
+                >
+                  {pane.render({
+                    self: handle,
+                    panes: paneHandles,
+                    windowSize,
+                    windowStartIndex: activeWindowStart
+                  })}
+                </section>
+              );
+            })}
+          </div>
         </div>
+        {shouldRenderInline && navPosition === 'bottom' && navContent}
       </div>
-      {navPosition === 'bottom' && renderNav()}
-    </div>
+      {navSlot && navContent ? createPortal(navContent, navSlot) : null}
+    </>
   );
 }
