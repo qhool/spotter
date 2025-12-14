@@ -44,6 +44,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
         <div className="nav-center">
           <span className="nav-center-portal" id={navId} />
         </div>
+        <div className="nav-right" />
       </nav>
       
       <main className="main-content">
@@ -58,6 +59,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           <TestbedPage 
             sdk={sdk}
             titleSlot={titleSlot}
+            navSlot={navSlot} 
           />
         )}
       </main>

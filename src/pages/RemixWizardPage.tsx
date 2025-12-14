@@ -43,8 +43,8 @@ export function RemixWizardPage({ sdk, titleSlot, navSlot }: RemixWizardPageProp
 
   const wizardViewTitles = useMemo<WizardViewTitles>(
     () => ({
-      1: ['Search', 'Selected Items', 'Remix', 'Export'],
-      2: ['Search + Selected', 'Selected + Remix', 'Remix + Export']
+      1: ['Search', 'Selected', 'Remix', 'Export'],
+      2: ['Select Items', 'Remix', 'Export']
     }),
     []
   );
