@@ -88,13 +88,13 @@
   }
 
   .wizard-pane {
-    padding: 0.85rem;
+    padding: 0.5rem;
   }
 }
 
 @media (max-width: 540px) {
   .wizard-pane {
-    padding: 0.65rem;
+    padding: 0.4rem;
     border-radius: 12px;
   }
 
