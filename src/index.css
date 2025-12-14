@@ -25,7 +25,7 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  min-width: 320px;
+  min-width: 280px;
   min-height: 100vh;
   background-color: #0f0f0f;
   color: rgba(255, 255, 255, 0.87);
@@ -35,4 +35,15 @@ body {
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+}
+
+@media (max-width: 600px) {
+  body {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
 }

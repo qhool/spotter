@@ -220,6 +220,32 @@
   animation: rotate 1s linear infinite;
 }
 
+@media (max-width: 600px) {
+  .track-item {
+    padding: 4px 6px;
+  }
+
+  .track-info {
+    margin-right: 8px;
+  }
+
+  .track-name,
+  .track-artist,
+  .track-album {
+    max-width: none;
+  }
+
+  .track-duration {
+    min-width: 52px;
+    font-size: 0.75rem;
+  }
+
+  .no-tracks,
+  .track-loading {
+    padding: 1.5rem;
+  }
+}
+
 @keyframes rotate {
   from {
     transform: rotate(0deg);

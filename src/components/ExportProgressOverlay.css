@@ -124,3 +124,28 @@
   opacity: 0.7;
   margin-top: 1rem;
 }
+
+@media (max-width: 600px) {
+  .export-progress-modal {
+    width: 90%;
+    min-width: 0;
+    padding: 1.25rem;
+  }
+
+  .export-progress-content {
+    gap: 1rem;
+  }
+
+  .export-progress-title {
+    font-size: 1.25rem;
+  }
+
+  .export-progress-description,
+  .completion-dismiss-hint {
+    font-size: 0.85rem;
+  }
+
+  .spotify-link-button {
+    width: 100%;
+  }
+}

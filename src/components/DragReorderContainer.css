@@ -108,3 +108,57 @@
   padding: 2rem;
   font-style: italic;
 }
+
+@media (max-width: 900px) {
+  .drag-reorder-container {
+    border-width: 1px;
+    border-radius: 6px;
+  }
+
+  .drag-item {
+    padding: 0.3rem;
+  }
+
+  .debug-box {
+    padding: 0.85rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .drag-reorder-container {
+    border-radius: 4px;
+  }
+
+  .drag-item {
+    padding: 0.25rem;
+    font-size: 0.9rem;
+  }
+
+  .debug-box {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .debug-content {
+    font-size: 0.75rem;
+  }
+
+  .no-results {
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .drag-reorder-container {
+    border-width: 1px;
+  }
+
+  .drag-item {
+    padding: 0.2rem;
+  }
+
+  .debug-box h4 {
+    font-size: 0.8rem;
+  }
+}

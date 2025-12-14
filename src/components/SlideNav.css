@@ -65,3 +65,36 @@
 .slide-nav-icon.group-hover {
   color: #1db954;
 }
+
+@media (max-width: 768px) {
+  .slide-nav-outer {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 0 0.35rem;
+  }
+
+  .slide-nav-inner {
+    gap: 0.2rem;
+  }
+
+  .slide-nav-item {
+    font-size: 0.95rem;
+    padding: 0.45rem 0.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .slide-nav-outer {
+    padding: 0 0.25rem;
+  }
+
+  .slide-nav-item {
+    font-size: 0.9rem;
+  }
+
+  .slide-nav-icon {
+    width: 28px;
+    height: 28px;
+    margin: 0 0.15rem;
+  }
+}

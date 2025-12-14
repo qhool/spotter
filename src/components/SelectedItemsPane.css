@@ -84,3 +84,21 @@
   font-style: italic;
   padding: 2rem 1rem;
 }
+
+@media (max-width: 600px) {
+  .selected-items-pane {
+    gap: 0.5rem;
+  }
+
+  .selected-items-pane__count {
+    padding: 0.05rem 0.5rem;
+  }
+
+  .selected-items-pane__drag-container {
+    padding-right: 0;
+  }
+
+  .selected-items-pane__empty {
+    padding: 1.5rem 0.5rem;
+  }
+}

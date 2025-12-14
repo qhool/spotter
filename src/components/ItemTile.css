@@ -106,3 +106,43 @@
   display: flex;
   gap: 0.25rem;
 }
+
+@media (max-width: 640px) {
+  .item-tile {
+    padding: 0.85rem;
+    gap: 0.75rem;
+  }
+
+  .item-image {
+    width: 52px;
+    height: 52px;
+  }
+
+  .item-title {
+    font-size: 1.05rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .item-description,
+  .item-metadata {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .item-tile {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .item-image {
+    width: 100%;
+    height: 160px;
+  }
+
+  .item-controls {
+    position: static;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+}

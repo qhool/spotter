@@ -8,6 +8,12 @@
   flex: 1;
 }
 
+@media (max-width: 600px) {
+  .search-pane {
+    gap: 0.75rem;
+  }
+}
+
 .search-pane > .loading,
 .search-pane > .playlist-container {
   flex: 1;
