@@ -85,7 +85,7 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
         aria-label="User menu"
         aria-expanded={isOpen}
       >
-        <Menu />
+        <img src="/images/logo.png" alt="Spotter logo" className="hamburger-logo" />
       </button>
 
       {isOpen && (

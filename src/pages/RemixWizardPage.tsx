@@ -8,15 +8,13 @@ import { RemixPane } from '../components/RemixPane';
 import { RemixOptions } from '../data/RemixFunctions';
 import { ExportPane } from '../components/ExportPane';
 import './RemixWizardPage.css';
-import { createPortal } from 'react-dom';
 
 interface RemixWizardPageProps {
   sdk: SpotifyApi;
-  titleSlot: Element | null;
   navSlot: Element | null;
 }
 
-export function RemixWizardPage({ sdk, titleSlot, navSlot }: RemixWizardPageProps) {
+export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(() => new Set());
@@ -120,8 +118,6 @@ export function RemixWizardPage({ sdk, titleSlot, navSlot }: RemixWizardPageProp
 
   return (
     <div className="remix-wizard-page">
-      {titleSlot ? createPortal(<span className="nav-title-suffix">: Remix</span>, titleSlot) : null}
-
       <div className="remix-wizard-content">
         <Wizard
           className="remix-wizard"

@@ -22,9 +22,7 @@ function App() {
 function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
 
   const [currentPage, setCurrentPage] = useState<Page>('remix-wizard');
-  const titleId = 'nav-title-portal-slot';
   const navId = 'wizard-nav-slot';
-  const titleSlot = useControlsSlot(titleId);
   const navSlot = useControlsSlot(navId);
 
   return (
@@ -36,10 +34,6 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
             onTestbedClick={() => setCurrentPage('testbed')}
             onMainAppClick={() => setCurrentPage('remix-wizard')}
           />
-          <div className="nav-title">
-            Spotter
-            <span className="nav-title-portal" id={titleId} />
-          </div>
         </div>
         <div className="nav-center">
           <span className="nav-center-portal" id={navId} />
@@ -51,14 +45,11 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
         {currentPage === 'remix-wizard' && (
           <RemixWizardPage 
             sdk={sdk}
-            titleSlot={titleSlot}
             navSlot={navSlot}
           />
         )}
         {currentPage === 'testbed' && (
           <TestbedPage 
-            sdk={sdk}
-            titleSlot={titleSlot}
             navSlot={navSlot} 
           />
         )}

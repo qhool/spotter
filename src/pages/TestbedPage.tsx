@@ -1,18 +1,19 @@
-import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { createPortal } from 'react-dom';
 
 interface TestbedPageProps {
-  sdk: SpotifyApi;
-  titleSlot: Element | null;
   navSlot: Element | null;
 }
 
-export function TestbedPage({ titleSlot, navSlot }: TestbedPageProps) {
+export function TestbedPage({ navSlot }: TestbedPageProps) {
 
   return (
     <div className="testbed-container" style={{ padding: '2rem' }}>
-      {titleSlot ? createPortal(<span className="nav-title-suffix">: Testbed</span>, titleSlot) : null}
-      {navSlot ? createPortal(<div className="nav-slot-content">Nav Content</div>, navSlot) : null}
+      {navSlot
+        ? createPortal(
+            <div className="nav-slot-content nav-slot-testbed">Scary Testing Page</div>,
+            navSlot
+          )
+        : null}
       <div className="testbed-message">
         <h2>Experimental Playground</h2>
         <p>
