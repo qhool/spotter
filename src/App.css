@@ -211,11 +211,72 @@
   min-width: 300px; /* Minimum width for readability */
   flex: 1;
   min-height: 0;
+  padding: 2rem;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .remix-page .right-panel {
   flex: 1; /* Take remaining space */
   min-width: 0; /* Allow to shrink if needed */
+}
+
+.scary-testbed {
+  width: min(520px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.scary-testbed__button {
+  padding: 1.15rem;
+  border-radius: 0.75rem;
+  border: 2px solid rgba(255, 84, 112, 0.9);
+  background: linear-gradient(135deg, rgba(255, 84, 112, 0.85), rgba(255, 94, 58, 0.85));
+  color: #fff5f7;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 8px 30px rgba(255, 84, 112, 0.35);
+}
+
+.scary-testbed__button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255, 84, 112, 0.45);
+}
+
+.scary-testbed__button:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 18px rgba(255, 84, 112, 0.35);
+}
+
+.scary-testbed__text {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+  min-height: 2.5rem;
+}
+
+.scary-testbed__text i {
+  color: #ff92c2;
+}
+
+@media (max-width: 520px) {
+  .testbed-container {
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .scary-testbed__button {
+    padding: 1rem;
+    font-size: 1rem;
+  }
 }
 
 .toggle-label {
