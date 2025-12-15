@@ -17,6 +17,9 @@ type LoadingAnimationStyle = CSSProperties & {
 export function LoadingAnimation({ label = 'Loading…', className, width }: LoadingAnimationProps) {
   const classes = ['loading-animation', className].filter(Boolean).join(' ');
   const style: LoadingAnimationStyle = {};
+  const assetBase = (import.meta.env?.BASE_URL ?? '/');
+  const webpSrc = `${assetBase}media/loading.webp`;
+  const gifSrc = `${assetBase}media/loading.gif`;
 
   if (width !== undefined) {
     style['--loading-animation-width'] = typeof width === 'number' ? `${width}px` : width;
@@ -27,9 +30,9 @@ export function LoadingAnimation({ label = 'Loading…', className, width }: Loa
       <div className="loading-animation-frame" aria-hidden="true">
         <div className="loading-animation-inner">
           <picture>
-            <source srcSet="/media/loading.webp" type="image/webp" />
+            <source srcSet={webpSrc} type="image/webp" />
             <img
-              src="/media/loading.gif"
+              src={gifSrc}
               alt=""
               className="loading-animation-media"
               loading="lazy"
