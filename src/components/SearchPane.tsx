@@ -1,6 +1,6 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { PlusCircle } from 'iconoir-react';
+import { PlusCircle, Search as SearchIcon, XmarkCircle } from 'iconoir-react';
 import { ItemTile, ContentType } from './ItemTile';
 import { ButtonTile } from './ButtonTile';
 import './SearchPane.css';
@@ -15,7 +15,6 @@ export interface SearchPaneProps {
   sdk: SpotifyApi;
   onAddItem: (item: TrackContainer<any>) => void;
   initialContentType?: ContentType;
-  initialShowMyItems?: boolean;
   selectedItems?: TrackContainer<any>[];
 }
 
@@ -30,16 +29,16 @@ export function SearchPane({
   sdk,
   onAddItem,
   initialContentType = 'playlist',
-  initialShowMyItems = true,
   selectedItems = []
 }: SearchPaneProps) {
   const [contentType, setContentType] = useState<ContentType>(initialContentType);
-  const [showMyItems, setShowMyItems] = useState(initialShowMyItems);
   const [searchQuery, setSearchQuery] = useState('');
   const [items, setItems] = useState<TrackContainer<any>[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchPage>(null);
+  const trimmedQuery = searchQuery.trim();
+  const showingPersonalItems = trimmedQuery.length === 0;
 
   const selectedIds = useMemo(
     () => new Set(selectedItems.map(item => item.id)),
@@ -47,9 +46,9 @@ export function SearchPane({
   );
 
   const placeholder = `Search ${contentType}s...`;
-  const noResultsMessage = !showMyItems
-    ? `No ${contentType}s found. Try a different search term.`
-    : `No ${contentType}s found.`;
+  const noResultsMessage = showingPersonalItems
+    ? `No ${contentType}s found.`
+    : `No ${contentType}s found. Try a different search term.`;
 
   const fetchMyItems = useCallback(async () => {
     setLoading(true);
@@ -138,17 +137,14 @@ export function SearchPane({
   );
 
   useEffect(() => {
-    if (showMyItems) {
+    if (showingPersonalItems) {
       fetchMyItems();
-    } else {
-      setItems([]);
-      setSearchResults(null);
     }
-  }, [showMyItems, fetchMyItems]);
+  }, [showingPersonalItems, fetchMyItems]);
 
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!showMyItems && searchQuery.trim()) {
+    if (trimmedQuery) {
       performSearch(false);
     }
   };
@@ -165,7 +161,9 @@ export function SearchPane({
   );
 
   const hasMoreItems = Boolean(
-    !showMyItems && searchResults && searchResults.next &&
+    !showingPersonalItems &&
+      searchResults &&
+      searchResults.next &&
       searchResults.offset + searchResults.limit < searchResults.total
   );
   const remainingItems = searchResults
@@ -201,7 +199,7 @@ export function SearchPane({
     />
   ));
 
-  if (!showMyItems && hasMoreItems && !loading) {
+  if (!showingPersonalItems && hasMoreItems && !loading) {
     itemTiles.push(
       <ButtonTile
         key="load-more"
@@ -214,18 +212,18 @@ export function SearchPane({
 
   const hasResults = itemTiles.length > 0;
 
+  const handleClearSearch = () => {
+    if (!searchQuery) {
+      return;
+    }
+    setSearchQuery('');
+    setItems([]);
+    setSearchResults(null);
+  };
+
   const searchContent = (
     <div className="search-pane">
-      <div className="controls">
-        <label className="toggle-label">
-          <input
-            type="checkbox"
-            checked={showMyItems}
-            onChange={event => setShowMyItems(event.target.checked)}
-          />
-          My {contentType === 'playlist' ? 'Playlists' : 'Albums'}
-        </label>
-
+      <div className="search-controls">
         <select
           value={contentType}
           onChange={event => setContentType(event.target.value as ContentType)}
@@ -236,16 +234,37 @@ export function SearchPane({
         </select>
 
         <form onSubmit={handleSearchSubmit} className="search-form">
-          <input
-            type="text"
-            placeholder={placeholder}
-            value={searchQuery}
-            onChange={event => setSearchQuery(event.target.value)}
-            className="search-input"
-            disabled={showMyItems}
-          />
-          <button type="submit" disabled={showMyItems || !searchQuery.trim()}>
-            Search
+          <div className="search-input-wrapper">
+            <input
+              type="text"
+              placeholder={placeholder}
+              value={searchQuery}
+              onChange={event => setSearchQuery(event.target.value)}
+              className="search-input"
+            />
+            {searchQuery && (
+              <XmarkCircle
+                role="button"
+                tabIndex={0}
+                aria-label="Clear search"
+                className="search-clear-icon"
+                onClick={handleClearSearch}
+                onKeyDown={(event: KeyboardEvent<SVGSVGElement>) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handleClearSearch();
+                  }
+                }}
+              />
+            )}
+          </div>
+          <button
+            type="submit"
+            className="search-submit-icon"
+            disabled={!trimmedQuery}
+            aria-label="Search"
+          >
+            <SearchIcon />
           </button>
         </form>
       </div>
