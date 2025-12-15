@@ -88,13 +88,14 @@ export class ExportController {
       const batchProgress = (batchNumber - 1) / totalBatches * (1 / totalOperations);
       const overallProgress = operationProgress + batchProgress;
       
-      const description = `${overallDescription}: Adding tracks batch ${batchNumber}/${totalBatches}`;
-      this.onProgress?.(description, overallProgress, currentTrackIds.length + (batchNumber - 1) * batchSize);
+  const description = `${overallDescription}: Adding tracks batch ${batchNumber}/${totalBatches}`;
+  const processedCount = Math.min(currentTrackIds.length, tracks.length);
+  this.onProgress?.(description, overallProgress, processedCount);
       
       try {
         // Add batch and update current list
         await this.target.addTracks(batch);
-        currentTrackIds = [...currentTrackIds, ...batchTrackIds];
+  currentTrackIds = [...currentTrackIds, ...batchTrackIds];
       } catch (error) {
         console.log(`AddTracks failed (retry ${retryCount}/${this.maxRetries}), checking target state for recovery...`);
         
