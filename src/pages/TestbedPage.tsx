@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LoadingAnimation } from '../components/LoadingAnimation';
 
 interface TestbedPageProps {
   navSlot: Element | null;
@@ -36,7 +35,6 @@ export function TestbedPage({ navSlot }: TestbedPageProps) {
             'We told you it was scary.'
           )}
         </p>
-        <LoadingAnimation label="Loading animation preview" />
       </div>
     </div>
   );

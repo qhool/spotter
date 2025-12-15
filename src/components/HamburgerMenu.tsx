@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, LogOut, TestTubeSolid, UserCircle } from 'iconoir-react';
+import { Menu, LogOut, TestTubeSolid, UserCircle, InfoCircle } from 'iconoir-react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import { AboutOverlay } from './AboutOverlay';
 import './HamburgerMenu.css';
 
 interface HamburgerMenuProps {
@@ -19,6 +20,7 @@ interface UserProfile {
 export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: HamburgerMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -80,6 +82,11 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
+  };
+
+  const openAbout = () => {
+    setShowAbout(true);
+    setIsOpen(false);
   };
 
   return (
@@ -145,6 +152,14 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
             </button>
 
             <button 
+              className="menu-item"
+              onClick={openAbout}
+            >
+              <InfoCircle className="menu-icon" />
+              About Spotter
+            </button>
+
+            <button 
               className="menu-item logout-item"
               onClick={handleLogout}
             >
@@ -154,6 +169,8 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
           </div>
         </div>
       )}
+
+      <AboutOverlay isOpen={showAbout} onClose={() => setShowAbout(false)} />
     </div>
   );
 }
