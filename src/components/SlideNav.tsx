@@ -29,6 +29,7 @@ export function SlideNav({ items, selectedIndex }: SlideNavProps) {
 
   // Calculate the offset needed to center the selected item
   useEffect(() => {
+    console.log('Slidenav layout effect');
     if (!outerRef.current || !innerRef.current || !itemRefs.current[selectedIndex]) {
       return;
     }
@@ -38,12 +39,14 @@ export function SlideNav({ items, selectedIndex }: SlideNavProps) {
 
     const outerCenter = outerRect.width / 2 + outerRect.left;
     const selectedItemCenter = selectedItemRect.left + selectedItemRect.width / 2;
-    
     // Calculate the offset needed to center the selected item text (ignoring icons)
     const offset = selectedItemCenter - outerCenter;
 
-    // getBoundingClientRect returns values *including* current translation
-    setTranslateX(translateX - offset);
+    // getBoundingClientRect returns values *including* current translation, and
+    // the current value of translateX might not be reflected there yet
+    const translate = new DOMMatrix(getComputedStyle(innerRef.current).transform);
+
+    setTranslateX(translate.e - offset);
   }, [selectedIndex, items]);
 
   return (
