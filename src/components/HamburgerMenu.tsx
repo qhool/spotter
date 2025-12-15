@@ -23,6 +23,7 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
   const [showAbout, setShowAbout] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const logoSrc = `${import.meta.env.BASE_URL ?? '/'}images/logo.png`;
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -98,7 +99,7 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
         aria-label="User menu"
         aria-expanded={isOpen}
       >
-        <img src="/images/logo.png" alt="Spotter logo" className="hamburger-logo" />
+        <img src={logoSrc} alt="Spotter logo" className="hamburger-logo" />
       </button>
 
       {isOpen && (
