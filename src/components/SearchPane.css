@@ -98,7 +98,7 @@
   }
 }
 
-.search-pane > .loading,
+.search-pane > .loading-animation,
 .search-pane > .playlist-container {
   flex: 1;
   min-height: 0;

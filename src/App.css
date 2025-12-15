@@ -204,6 +204,13 @@
   overflow: hidden;
 }
 
+.left-panel > .loading-animation {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+
 .testbed-container {
   display: flex;
   flex-direction: column;
@@ -351,13 +358,6 @@
   background-color: #1a1a1a;
   color: #666666;
   cursor: not-allowed;
-}
-
-.loading {
-  text-align: center;
-  color: #cccccc;
-  font-size: 1.1rem;
-  padding: 2rem;
 }
 
 .no-results {

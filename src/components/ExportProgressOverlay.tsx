@@ -1,4 +1,5 @@
 import './ExportProgressOverlay.css';
+import { LoadingAnimation } from './LoadingAnimation';
 
 interface ExportProgressOverlayProps {
   description: string;
@@ -80,6 +81,10 @@ export function ExportProgressOverlay({
             // Progress state
             <>
               <h3 className="export-progress-title">Exporting Tracks</h3>
+
+              <div className="export-progress-visual">
+                <LoadingAnimation label="" width={220} />
+              </div>
               
               <div className="export-progress-description">
                 {description}

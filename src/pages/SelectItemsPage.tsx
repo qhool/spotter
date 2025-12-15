@@ -5,6 +5,7 @@ import { ButtonTile } from '../components/ButtonTile';
 import { TrashSolid, PlusCircle } from 'iconoir-react';
 import { LikedSongsContainer, PlaylistContainer, AlbumContainer, TrackContainer } from '../data/TrackContainer';
 import { DragReorderContainer } from '../components/DragReorderContainer';
+import { LoadingAnimation } from '../components/LoadingAnimation';
 
 interface SelectItemsPageProps {
   sdk: SpotifyApi;
@@ -262,7 +263,7 @@ export function SelectItemsPage({ sdk, selectedItems, setSelectedItems }: Select
           </div>
 
           {loading ? (
-            <div className="loading">Loading...</div>
+            <LoadingAnimation label={`Loading ${showMyItems ? 'your' : 'search'} ${contentType}s…`} />
           ) : (
             <div className="playlist-container">
               {itemTiles.length > 0 ? (

@@ -3,6 +3,7 @@ import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { PlusCircle, Search as SearchIcon, XmarkCircle } from 'iconoir-react';
 import { ItemTile, ContentType } from './ItemTile';
 import { ButtonTile } from './ButtonTile';
+import { LoadingAnimation } from './LoadingAnimation';
 import './SearchPane.css';
 import {
   TrackContainer,
@@ -270,7 +271,7 @@ export function SearchPane({
       </div>
 
       {loading ? (
-        <div className="loading">Loading...</div>
+        <LoadingAnimation label={`Loading ${contentType}s…`} />
       ) : (
         <div className="playlist-container">
           {hasResults ? (

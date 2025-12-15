@@ -6,6 +6,11 @@
   line-height: 1.2;
 }
 
+.track-list > .loading-animation {
+  flex: 1;
+  width: 100%;
+}
+
 .track-item {
   display: flex;
   justify-content: space-between;
@@ -204,22 +209,6 @@
   padding: 2rem;
 }
 
-.track-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  color: #888888;
-  gap: 1rem;
-}
-
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  animation: rotate 1s linear infinite;
-}
-
 @media (max-width: 600px) {
   .track-item {
     padding: 4px 6px;
@@ -240,17 +229,7 @@
     font-size: 0.75rem;
   }
 
-  .no-tracks,
-  .track-loading {
+  .no-tracks {
     padding: 1.5rem;
-  }
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }

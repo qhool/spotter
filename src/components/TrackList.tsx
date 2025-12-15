@@ -1,7 +1,8 @@
 import { Track } from '@spotify/web-api-ts-sdk';
 import { TrackContainer } from '../data/TrackContainer';
 import { useState, useEffect } from 'react';
-import { RefreshDouble, Computer, CloudSync } from 'iconoir-react';
+import { Computer, CloudSync } from 'iconoir-react';
+import { LoadingAnimation } from './LoadingAnimation';
 import './TrackList.css';
 
 interface TrackListProps {
@@ -73,10 +74,7 @@ export function TrackList({ trackContainer, refreshTrigger, excludedTrackIds = n
   if (loading) {
     return (
       <div className="track-list">
-        <div className="track-loading">
-          <RefreshDouble className="loading-spinner" />
-          <span>Loading tracks...</span>
-        </div>
+        <LoadingAnimation label="Loading tracks…" />
       </div>
     );
   }
