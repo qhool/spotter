@@ -58,6 +58,12 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
   }, []);
 
   const handleLogout = () => {
+    try {
+      sdk.logOut();
+    } catch (error) {
+      console.error('Failed to log out via Spotify SDK:', error);
+    }
+
     // Clear any cached tokens and reload to restart auth flow
     localStorage.removeItem('spotify-sdk-access-token');
     localStorage.removeItem('spotify-sdk-refresh-token');
