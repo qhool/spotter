@@ -126,7 +126,8 @@ export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
           viewTitles={wizardViewTitles}
           navSlot={navSlot}
           responsiveBreakpoints={[
-            { minWidth: 1200, panes: 2 },
+            { minWidth: 1440, panes: 3 },
+            { minWidth: 960, panes: 2 },
             { minWidth: 0, panes: 1 }
           ]}
         />
