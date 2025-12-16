@@ -1,4 +1,5 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ListSelect, ArrowRightTagSolid, XmarkCircle } from 'iconoir-react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import type { Device } from '@spotify/web-api-ts-sdk';
 import { RemixContainer } from '../data/TrackContainer';
@@ -10,6 +11,14 @@ import './ExportPane.css';
 
 export type ExportPaneExportType = 'playlist' | 'json' | 'queue';
 type DeviceWithId = Device & { id: string };
+interface PlaylistSummary {
+  id: string;
+  name: string;
+  description?: string | null;
+  ownerName?: string | null;
+  imageUrl?: string | null;
+  trackCount?: number;
+}
 
 interface ExportPaneProps {
   sdk: SpotifyApi;
@@ -44,6 +53,14 @@ export function ExportPane({
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
+
+  const [isPlaylistPickerOpen, setIsPlaylistPickerOpen] = useState(false);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  const [playlistLoadError, setPlaylistLoadError] = useState<string | null>(null);
+  const [playlistOptions, setPlaylistOptions] = useState<PlaylistSummary[]>([]);
+  const [selectedExistingPlaylist, setSelectedExistingPlaylist] = useState<PlaylistSummary | null>(null);
+  const [playlistSelectionMode, setPlaylistSelectionMode] = useState<'append' | 'replace'>('append');
+
   const trackLimitControlRef = useRef<HTMLDivElement | null>(null);
   const trackLimitDismissTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -169,6 +186,60 @@ export function ExportPane({
       cancelled = true;
     };
   }, [sdk]);
+
+  const fetchUserPlaylists = useCallback(async () => {
+    setIsLoadingPlaylists(true);
+    setPlaylistLoadError(null);
+    try {
+  const response = await sdk.currentUser.playlists.playlists(50, 0);
+      const playlists: PlaylistSummary[] = (response.items ?? []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        ownerName: item.owner?.display_name ?? item.owner?.id ?? null,
+        imageUrl: item.images?.[0]?.url ?? null,
+        trackCount: item.tracks?.total ?? undefined
+      }));
+      setPlaylistOptions(playlists);
+    } catch (error) {
+      console.error('ExportPane: failed to load playlists', error);
+      setPlaylistLoadError('Unable to load your playlists. Please try again.');
+    } finally {
+      setIsLoadingPlaylists(false);
+    }
+  }, [sdk]);
+
+  const openPlaylistPicker = useCallback(() => {
+    setIsPlaylistPickerOpen(true);
+  }, []);
+
+  const closePlaylistPicker = useCallback(() => {
+    setIsPlaylistPickerOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaylistPickerOpen) {
+      return;
+    }
+    if (playlistOptions.length === 0 && !isLoadingPlaylists && !playlistLoadError) {
+      fetchUserPlaylists();
+    }
+  }, [fetchUserPlaylists, isLoadingPlaylists, isPlaylistPickerOpen, playlistLoadError, playlistOptions.length]);
+
+  useEffect(() => {
+    if (!isPlaylistPickerOpen) {
+      return;
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePlaylistPicker();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [closePlaylistPicker, isPlaylistPickerOpen]);
 
   const clearTrackLimitDismissTimer = useCallback(() => {
     if (trackLimitDismissTimeout.current) {
@@ -350,18 +421,41 @@ export function ExportPane({
         setCompletionSpotifyId(null);
         setIsCompleted(true);
       } else {
-        const playlistTarget = new PlaylistExportTarget(sdk, {
-          name: playlistName,
-          description: playlistDescription
-        });
+        const usingExistingPlaylist = Boolean(selectedExistingPlaylist);
+        const playlistTarget = new PlaylistExportTarget(
+          sdk,
+          usingExistingPlaylist && selectedExistingPlaylist
+            ? { id: selectedExistingPlaylist.id }
+            : { name: playlistName, description: playlistDescription }
+        );
         const controller = new ExportController(playlistTarget, 5, progressHandler);
 
-        await controller.append(filteredTracks);
+        if (usingExistingPlaylist && playlistSelectionMode === 'replace') {
+          await controller.replace(filteredTracks);
+        } else {
+          await controller.append(filteredTracks);
+        }
+
         const playlistId = playlistTarget.getPlaylistId();
-        setLastCreatedPlaylistId(playlistId);
-        setCompletionMessage(
-          `Created playlist "${playlistName}" with ${filteredTracks.length} tracks`
-        );
+        const targetName = usingExistingPlaylist
+          ? selectedExistingPlaylist?.name ?? 'playlist'
+          : playlistName;
+        const trackWord = filteredTracks.length === 1 ? 'track' : 'tracks';
+
+        if (usingExistingPlaylist) {
+          if (playlistSelectionMode === 'replace') {
+            setCompletionMessage(
+              `Replaced all tracks in "${targetName}" with ${filteredTracks.length} ${trackWord}`
+            );
+          } else {
+            setCompletionMessage(`Added ${filteredTracks.length} ${trackWord} to "${targetName}"`);
+          }
+          setLastCreatedPlaylistId(null);
+        } else {
+          setCompletionMessage(`Created playlist "${targetName}" with ${filteredTracks.length} ${trackWord}`);
+          setLastCreatedPlaylistId(playlistId);
+        }
+
         setCompletionSpotifyId(playlistId);
         setIsCompleted(true);
       }
@@ -384,7 +478,18 @@ export function ExportPane({
       setProgressTracksProcessed(0);
       setProgressTotalTracks(0);
     }
-  }, [createProgressHandler, exportType, getFilteredTracks, playlistDescription, playlistName, remixContainer, sdk, selectedQueueDevice]);
+  }, [
+    createProgressHandler,
+    exportType,
+    getFilteredTracks,
+    playlistDescription,
+    playlistName,
+    playlistSelectionMode,
+    remixContainer,
+    sdk,
+    selectedExistingPlaylist,
+    selectedQueueDevice
+  ]);
 
   const actionButtonLabel = useMemo(() => {
     if (isExporting) {
@@ -395,10 +500,15 @@ export function ExportPane({
         return 'Download JSON';
       case 'queue':
         return 'Queue Tracks';
+      case 'playlist':
+        if (selectedExistingPlaylist) {
+          return playlistSelectionMode === 'replace' ? 'Replace Playlist' : 'Append to Playlist';
+        }
+        return 'Create Playlist';
       default:
         return 'Create Playlist';
     }
-  }, [exportType, isExporting]);
+  }, [exportType, isExporting, playlistSelectionMode, selectedExistingPlaylist]);
 
   const canAdjustTrackLimit = filteredTrackCount !== null && filteredTrackCount > 0;
 
@@ -498,6 +608,25 @@ export function ExportPane({
     closeTrackLimitPopover();
   }, [canAdjustTrackLimit, closeTrackLimitPopover, isTrackLimitPopoverOpen]);
 
+  const handlePlaylistSelect = useCallback(
+    (playlist: PlaylistSummary) => {
+      setSelectedExistingPlaylist(playlist);
+      setPlaylistSelectionMode('append');
+      setIsPlaylistPickerOpen(false);
+      setLastCreatedPlaylistId(null);
+    },
+    []
+  );
+
+  const handleClearSelectedPlaylist = useCallback(() => {
+    setSelectedExistingPlaylist(null);
+    setPlaylistSelectionMode('append');
+  }, []);
+
+  const handleTogglePlaylistMode = useCallback(() => {
+    setPlaylistSelectionMode(mode => (mode === 'append' ? 'replace' : 'append'));
+  }, []);
+
   const containerClasses = ['export-pane-container'];
   if (className) {
     containerClasses.push(className);
@@ -526,8 +655,9 @@ export function ExportPane({
     );
   }
 
-  return (
-    <div className={containerClasses.join(' ')}>
+      return (
+        <>
+          <div className={containerClasses.join(' ')}>
       <ExportProgressOverlay
         description={progressDescription}
         completed={progressCompleted}
@@ -591,20 +721,30 @@ export function ExportPane({
             </select>
           </div>
 
-          {exportType === 'playlist' && (
+          {exportType === 'playlist' && !selectedExistingPlaylist && (
             <>
               <div className="export-group">
                 <label className="control-label" htmlFor="playlist-name">
                   Playlist Name
                 </label>
-                <input
-                  id="playlist-name"
-                  type="text"
-                  className="control-input"
-                  value={playlistName}
-                  onChange={handlePlaylistNameChange}
-                  placeholder="Enter playlist name"
-                />
+                <div className="playlist-name-row">
+                  <input
+                    id="playlist-name"
+                    type="text"
+                    className="control-input"
+                    value={playlistName}
+                    onChange={handlePlaylistNameChange}
+                    placeholder="Enter playlist name"
+                  />
+                  <button
+                    type="button"
+                    className="icon-button playlist-picker-button"
+                    aria-label="Select existing playlist"
+                    onClick={openPlaylistPicker}
+                  >
+                    <ListSelect aria-hidden="true" />
+                  </button>
+                </div>
               </div>
 
               <div className="export-group">
@@ -621,6 +761,45 @@ export function ExportPane({
                 />
               </div>
             </>
+          )}
+
+          {exportType === 'playlist' && selectedExistingPlaylist && (
+            <div className="selected-playlist-card">
+              <div className="selected-playlist-card__main">
+                <div className="selected-playlist-card__thumb">
+                  {selectedExistingPlaylist.imageUrl ? (
+                    <img src={selectedExistingPlaylist.imageUrl} alt="Playlist cover" />
+                  ) : (
+                    <div className="selected-playlist-card__thumb-placeholder" aria-hidden="true" />
+                  )}
+                </div>
+                <div className="selected-playlist-card__details">
+                  <p className="selected-playlist-card__label">Exporting to existing playlist</p>
+                  <h4>{selectedExistingPlaylist.name}</h4>
+                  <p className="selected-playlist-card__meta">
+                    {selectedExistingPlaylist.ownerName ? `by ${selectedExistingPlaylist.ownerName}` : 'Your playlist'}
+                    {selectedExistingPlaylist.trackCount != null && ` • ${selectedExistingPlaylist.trackCount} tracks`}
+                  </p>
+                </div>
+              </div>
+              <div className="selected-playlist-card__actions">
+                <button
+                  type="button"
+                  className="playlist-mode-toggle"
+                  onClick={handleTogglePlaylistMode}
+                >
+                  {playlistSelectionMode === 'replace' ? 'Replace' : 'Append'}
+                </button>
+                <button
+                  type="button"
+                  className="icon-button"
+                  aria-label="Clear playlist selection"
+                  onClick={handleClearSelectedPlaylist}
+                >
+                  <XmarkCircle aria-hidden="true" />
+                </button>
+              </div>
+            </div>
           )}
 
           {exportType === 'playlist' && lastCreatedPlaylistId && (
@@ -694,5 +873,69 @@ export function ExportPane({
         </div>
       </div>
     </div>
+
+          {isPlaylistPickerOpen && (
+            <div className="playlist-picker-overlay" role="dialog" aria-modal="true">
+              <div className="playlist-picker-backdrop" onClick={closePlaylistPicker} aria-hidden="true" />
+              <div className="playlist-picker-panel">
+                <div className="playlist-picker-header">
+                  <div>
+                    <p className="playlist-picker-label">Export destination</p>
+                    <h3>Select an existing playlist</h3>
+                  </div>
+                  <button type="button" className="text-button" onClick={closePlaylistPicker}>
+                    Cancel
+                  </button>
+                </div>
+                <div className="playlist-picker-body">
+                  {isLoadingPlaylists && <p className="playlist-picker-status">Loading your playlists…</p>}
+
+                  {!isLoadingPlaylists && playlistLoadError && (
+                    <div className="playlist-picker-status">
+                      <p>{playlistLoadError}</p>
+                      <button type="button" className="text-button" onClick={() => fetchUserPlaylists()}>
+                        Try again
+                      </button>
+                    </div>
+                  )}
+
+                  {!isLoadingPlaylists && !playlistLoadError && playlistOptions.length === 0 && (
+                    <p className="playlist-picker-status">You don’t have any playlists yet.</p>
+                  )}
+
+                  {!isLoadingPlaylists && !playlistLoadError && playlistOptions.length > 0 && (
+                    <ul className="playlist-picker-list">
+                      {playlistOptions.map((playlist) => (
+                        <li key={playlist.id}>
+                          <button
+                            type="button"
+                            className="playlist-picker-item"
+                            onClick={() => handlePlaylistSelect(playlist)}
+                          >
+                            <div className="playlist-picker-item__info">
+                              {playlist.imageUrl ? (
+                                <img src={playlist.imageUrl} alt="" role="presentation" />
+                              ) : (
+                                <div className="playlist-picker-item__thumb-placeholder" aria-hidden="true" />
+                              )}
+                              <div>
+                                <span className="playlist-picker-item__name">{playlist.name}</span>
+                                <span className="playlist-picker-item__meta">
+                                  {playlist.ownerName ? `by ${playlist.ownerName}` : 'Owned by you'}
+                                  {playlist.trackCount != null && ` • ${playlist.trackCount} tracks`}
+                                </span>
+                              </div>
+                            </div>
+                            <ArrowRightTagSolid aria-hidden="true" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
   );
 }
