@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import type { Device } from '@spotify/web-api-ts-sdk';
 import { RemixContainer } from '../data/TrackContainer';
@@ -36,11 +36,16 @@ export function ExportPane({
   const [isExporting, setIsExporting] = useState(false);
   const [filteredTrackCount, setFilteredTrackCount] = useState<number | null>(null);
   const [lastCreatedPlaylistId, setLastCreatedPlaylistId] = useState<string | null>(null);
+  const [trackLimit, setTrackLimit] = useState<number | null>(null);
+  const [isTrackLimitPopoverOpen, setIsTrackLimitPopoverOpen] = useState(false);
+  const [trackLimitDraft, setTrackLimitDraft] = useState<number | null>(null);
 
   const [availableDevices, setAvailableDevices] = useState<DeviceWithId[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isLoadingDevices, setIsLoadingDevices] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
+  const trackLimitControlRef = useRef<HTMLDivElement | null>(null);
+  const trackLimitDismissTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [progressDescription, setProgressDescription] = useState('');
   const [progressCompleted, setProgressCompleted] = useState(0);
@@ -87,6 +92,24 @@ export function ExportPane({
       cancelled = true;
     };
   }, [remixContainer, excludedTrackIds]);
+
+  useEffect(() => {
+    if (filteredTrackCount === null) {
+      return;
+    }
+    setTrackLimit(currentLimit => {
+      if (filteredTrackCount < 1) {
+        return null;
+      }
+      if (currentLimit === null) {
+        return currentLimit;
+      }
+      if (currentLimit > filteredTrackCount) {
+        return filteredTrackCount;
+      }
+      return currentLimit;
+    });
+  }, [filteredTrackCount]);
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +170,52 @@ export function ExportPane({
     };
   }, [sdk]);
 
+  const clearTrackLimitDismissTimer = useCallback(() => {
+    if (trackLimitDismissTimeout.current) {
+      window.clearTimeout(trackLimitDismissTimeout.current);
+      trackLimitDismissTimeout.current = null;
+    }
+  }, []);
+
+  const closeTrackLimitPopover = useCallback(() => {
+    clearTrackLimitDismissTimer();
+    setIsTrackLimitPopoverOpen(false);
+    setTrackLimitDraft(null);
+  }, [clearTrackLimitDismissTimer]);
+
+  const scheduleTrackLimitDismiss = useCallback(() => {
+    clearTrackLimitDismissTimer();
+    trackLimitDismissTimeout.current = window.setTimeout(() => {
+      closeTrackLimitPopover();
+    }, 3000);
+  }, [clearTrackLimitDismissTimer, closeTrackLimitPopover]);
+
+  useEffect(() => {
+    return () => {
+      clearTrackLimitDismissTimer();
+    };
+  }, [clearTrackLimitDismissTimer]);
+
+  useEffect(() => {
+    if (!isTrackLimitPopoverOpen) {
+      return;
+    }
+
+  const handlePointerDown = (event: PointerEvent) => {
+      if (!trackLimitControlRef.current) {
+        return;
+      }
+      if (!trackLimitControlRef.current.contains(event.target as Node)) {
+        closeTrackLimitPopover();
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [isTrackLimitPopoverOpen, closeTrackLimitPopover]);
+
   const handleExportTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setExportType(event.target.value as ExportPaneExportType);
   };
@@ -188,8 +257,13 @@ export function ExportPane({
       return [];
     }
     const response = await remixContainer.getTracks(-1);
-    return response.items.filter(track => !excludedTrackIds.has(track.id));
-  }, [remixContainer, excludedTrackIds]);
+    const filtered = response.items.filter(track => !excludedTrackIds.has(track.id));
+    if (trackLimit === null) {
+      return filtered;
+    }
+    const limit = Math.max(1, Math.min(trackLimit, filtered.length));
+    return filtered.slice(0, limit);
+  }, [remixContainer, excludedTrackIds, trackLimit]);
 
   const createProgressHandler = useCallback(
     (totalTracks: number): ProgressHandler => {
@@ -326,14 +400,103 @@ export function ExportPane({
     }
   }, [exportType, isExporting]);
 
+  const canAdjustTrackLimit = filteredTrackCount !== null && filteredTrackCount > 0;
+
+  const currentTrackLimitValue = useMemo(() => {
+    if (filteredTrackCount === null) {
+      return null;
+    }
+    if (isTrackLimitPopoverOpen && trackLimitDraft !== null) {
+      return Math.max(1, Math.min(trackLimitDraft, filteredTrackCount));
+    }
+    if (trackLimit === null) {
+      return filteredTrackCount;
+    }
+    return Math.max(1, Math.min(trackLimit, filteredTrackCount));
+  }, [filteredTrackCount, isTrackLimitPopoverOpen, trackLimit, trackLimitDraft]);
+
+  const trackLimitButtonText = useMemo(() => {
+    if (filteredTrackCount === null) {
+      return 'all tracks';
+    }
+    if (!currentTrackLimitValue || currentTrackLimitValue >= filteredTrackCount) {
+      return `all ${filteredTrackCount}`;
+    }
+    if (currentTrackLimitValue === 1) {
+      return `first of ${filteredTrackCount}`;
+    }
+    return `first ${currentTrackLimitValue} of ${filteredTrackCount}`;
+  }, [currentTrackLimitValue, filteredTrackCount]);
+
+
+  const effectiveExportCount = useMemo(() => {
+    if (filteredTrackCount === null) {
+      return null;
+    }
+    if (trackLimit === null) {
+      return filteredTrackCount;
+    }
+    return Math.max(1, Math.min(trackLimit, filteredTrackCount));
+  }, [filteredTrackCount, trackLimit]);
+
   const disableExportButton =
     !hasRemix ||
-    filteredTrackCount === 0 ||
+    (filteredTrackCount !== null && effectiveExportCount === 0) ||
     (exportType === 'queue' && (!selectedQueueDevice || isLoadingDevices || Boolean(deviceError)));
 
-  const trackCountLabel = filteredTrackCount === null
-    ? 'Export tracks to'
-    : `Export ${filteredTrackCount} track${filteredTrackCount === 1 ? '' : 's'} to`;
+  const handleTrackLimitButtonClick = useCallback(() => {
+    if (!canAdjustTrackLimit) {
+      return;
+    }
+    setIsTrackLimitPopoverOpen(prev => {
+      const nextOpen = !prev;
+      if (nextOpen) {
+        const fallbackTotal = filteredTrackCount ?? 1;
+        const baseValue = trackLimit === null ? fallbackTotal : Math.max(1, Math.min(trackLimit, fallbackTotal));
+        setTrackLimitDraft(baseValue);
+        scheduleTrackLimitDismiss();
+      } else {
+        setTrackLimitDraft(null);
+        clearTrackLimitDismissTimer();
+      }
+      return nextOpen;
+    });
+  }, [canAdjustTrackLimit, clearTrackLimitDismissTimer, filteredTrackCount, scheduleTrackLimitDismiss, trackLimit]);
+
+  const handleTrackLimitSliderChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      if (filteredTrackCount === null || filteredTrackCount === 0) {
+        return;
+      }
+      const value = Number(event.target.value);
+      const clamped = Math.max(1, Math.min(value, filteredTrackCount));
+      setTrackLimitDraft(clamped);
+      if (clamped >= filteredTrackCount) {
+        setTrackLimit(null);
+      } else {
+        setTrackLimit(clamped);
+      }
+      scheduleTrackLimitDismiss();
+    },
+    [filteredTrackCount, scheduleTrackLimitDismiss]
+  );
+
+  const handleTrackLimitSliderInteraction = useCallback(() => {
+    if (!isTrackLimitPopoverOpen) {
+      return;
+    }
+    scheduleTrackLimitDismiss();
+  }, [isTrackLimitPopoverOpen, scheduleTrackLimitDismiss]);
+
+  useEffect(() => {
+    if (!isTrackLimitPopoverOpen) {
+      return;
+    }
+    if (canAdjustTrackLimit) {
+      return;
+    }
+    closeTrackLimitPopover();
+  }, [canAdjustTrackLimit, closeTrackLimitPopover, isTrackLimitPopoverOpen]);
 
   const containerClasses = ['export-pane-container'];
   if (className) {
@@ -380,7 +543,41 @@ export function ExportPane({
         <div className="export-options">
           <div className="export-pane__format-row">
             <label className="export-pane__format-label" htmlFor="export-format">
-              {trackCountLabel}
+              <span className="export-pane__format-prefix">Export</span>
+              <div className="track-limit-control" ref={trackLimitControlRef}>
+                <button
+                  type="button"
+                  className="track-limit-button"
+                  disabled={!canAdjustTrackLimit}
+                  aria-haspopup="true"
+                  aria-expanded={isTrackLimitPopoverOpen}
+                  onClick={event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleTrackLimitButtonClick();
+                  }}
+                >
+                  {trackLimitButtonText}
+                </button>
+                {isTrackLimitPopoverOpen && filteredTrackCount !== null && filteredTrackCount > 0 && (
+                  <div className="track-limit-popover" role="dialog" aria-label="Limit exported tracks">
+                    <input
+                      type="range"
+                      min={1}
+                      max={filteredTrackCount}
+                      step={1}
+                      value={currentTrackLimitValue ?? filteredTrackCount}
+                      className="track-limit-slider"
+                      onChange={handleTrackLimitSliderChange}
+                      onPointerDown={handleTrackLimitSliderInteraction}
+                      onPointerUp={handleTrackLimitSliderInteraction}
+                      onFocus={handleTrackLimitSliderInteraction}
+                      onKeyDown={handleTrackLimitSliderInteraction}
+                    />
+                  </div>
+                )}
+              </div>
+              <span className="export-pane__format-suffix">to</span>
             </label>
             <select
               id="export-format"
