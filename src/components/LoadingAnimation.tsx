@@ -18,8 +18,8 @@ export function LoadingAnimation({ label = 'Loading…', className, width }: Loa
   const classes = ['loading-animation', className].filter(Boolean).join(' ');
   const style: LoadingAnimationStyle = {};
   const assetBase = (import.meta.env?.BASE_URL ?? '/');
-  const webpSrc = `${assetBase}media/loading.webp`;
-  const gifSrc = `${assetBase}media/loading.gif`;
+  const webpSrc = `${assetBase}media/loading_240.webp`;
+  const gifSrc = `${assetBase}media/loading_240.gif`;
 
   if (width !== undefined) {
     style['--loading-animation-width'] = typeof width === 'number' ? `${width}px` : width;
