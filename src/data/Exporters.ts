@@ -1,5 +1,5 @@
 import { Track, SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { RemovableExportTarget } from './ExportController';
+import { ExportTarget, RemovableExportTarget } from './ExportController';
 
 /**
  * Base class for export targets that store tracks in memory
@@ -125,29 +125,31 @@ export class PlaylistExportTarget implements RemovableExportTarget {
 
   getOverallDescription(): string {
     if (this.playlistId) {
-      return `Exporting to existing playlist (ID: ${this.playlistId})`;
-    } else if (this.playlistName) {
-      return `Exporting to new playlist "${this.playlistName}"`;
-    } else {
-      return 'Exporting to playlist';
+      return 'Updating existing Spotify playlist';
     }
+
+    if (this.playlistName) {
+      return `Creating Spotify playlist "${this.playlistName}"`;
+    }
+
+    return 'Creating Spotify playlist';
   }
 
   getInitializationDescription(): string {
-    if (this.playlistId) {
-      return 'Verifying playlist access';
-    } else {
-      return 'Creating playlist';
-    }
+    return this.playlistId ? 'Preparing playlist' : 'Creating playlist';
   }
 
   async addTracks(tracks: Track[]): Promise<void> {
     await this.ensurePlaylistExists();
 
-    if (tracks.length === 0) return;
+    const trackUris = tracks
+      .map(track => track.uri)
+      .filter((uri): uri is string => Boolean(uri));
 
-    // Add tracks to Spotify playlist (ExportController handles batching)
-    const trackUris = tracks.map(track => track.uri);
+    if (trackUris.length === 0) {
+      return;
+    }
+
     await this.sdk.playlists.addItemsToPlaylist(this.playlistId!, trackUris);
   }
 
@@ -231,5 +233,120 @@ export class PlaylistExportTarget implements RemovableExportTarget {
     }
 
     return tracks;
+  }
+}
+
+export class QueueExportTarget implements ExportTarget {
+  private sdk: SpotifyApi;
+  private deviceId: string;
+  private deviceName?: string;
+
+  constructor(sdk: SpotifyApi, options: { deviceId: string; deviceName?: string }) {
+    if (!options.deviceId) {
+      throw new Error('QueueExportTarget requires a device ID');
+    }
+    this.sdk = sdk;
+    this.deviceId = options.deviceId;
+    this.deviceName = options.deviceName;
+  }
+
+  private static isTrack(item: Track | { type?: string } | null | undefined): item is Track {
+    return Boolean(item && (item as Track).type === 'track');
+  }
+
+  async initialize(): Promise<void> {
+    const deviceLabel = this.deviceName ?? this.deviceId;
+
+    try {
+      const devices = await this.sdk.player.getAvailableDevices();
+      const isKnownDevice = devices.devices?.some(device => device.id === this.deviceId);
+
+      if (!isKnownDevice) {
+        console.warn(
+          `QueueExportTarget: selected device "${deviceLabel}" was not returned by Spotify's device list during initialization. Proceeding with queued export anyway.`
+        );
+      }
+    } catch (error) {
+      console.warn('QueueExportTarget: failed to refresh Spotify devices during initialization', error);
+    }
+
+    try {
+      await this.sdk.player.getUsersQueue();
+    } catch (error) {
+      throw new Error(
+        `Unable to access your Spotify queue. Make sure the device "${deviceLabel}" is active in Spotify, then try again.`
+      );
+    }
+  }
+
+  getOverallDescription(): string {
+    const label = this.deviceName ?? this.deviceId;
+    return `Adding tracks to your Spotify queue on ${label}`;
+  }
+
+  getInitializationDescription(): string {
+    return 'Checking your current playback queue';
+  }
+
+  getMaxAddBatchSize(): number {
+    return 1;
+  }
+
+  async addTracks(tracks: Track[]): Promise<void> {
+    const deviceLabel = this.deviceName ?? this.deviceId;
+
+    for (const track of tracks) {
+      if (!track?.uri) {
+        continue;
+      }
+      try {
+        await this.sdk.player.addItemToPlaybackQueue(track.uri, this.deviceId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const looksLikeParseError =
+          error instanceof SyntaxError || message.includes('Unexpected token');
+
+        if (looksLikeParseError) {
+          console.warn('QueueExportTarget: parse error ignored (Spotify queue endpoint returned invalid JSON)', {
+            track: track.name ?? track.id ?? track.uri,
+            deviceId: this.deviceId,
+            error: message
+          });
+          continue;
+        }
+
+        const trackLabel = track.name ?? track.id ?? track.uri;
+        console.error('QueueExportTarget: failed to queue track', {
+          track: trackLabel,
+          deviceId: this.deviceId,
+          error: message
+        });
+        throw new Error(
+          `Spotify couldn't queue "${trackLabel}" on ${deviceLabel}. Make sure the device is active in Spotify and try again.`
+        );
+      }
+    }
+  }
+
+  async getCurrentTrackIDs(): Promise<string[]> {
+    try {
+      const queue = await this.sdk.player.getUsersQueue();
+      const ids: string[] = [];
+
+      if (QueueExportTarget.isTrack(queue.currently_playing) && queue.currently_playing.id) {
+        ids.push(queue.currently_playing.id);
+      }
+
+      for (const item of queue.queue) {
+        if (QueueExportTarget.isTrack(item) && item.id) {
+          ids.push(item.id);
+        }
+      }
+
+      return ids;
+    } catch (error) {
+      console.warn('QueueExportTarget: failed to read queue state', error);
+      return [];
+    }
   }
 }

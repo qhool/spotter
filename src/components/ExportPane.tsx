@@ -1,13 +1,15 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
+import type { Device } from '@spotify/web-api-ts-sdk';
 import { RemixContainer } from '../data/TrackContainer';
 import { RemixOptions } from '../data/RemixFunctions';
 import { ExportController, ProgressHandler } from '../data/ExportController';
-import { JSONExportTarget, PlaylistExportTarget } from '../data/Exporters';
+import { JSONExportTarget, PlaylistExportTarget, QueueExportTarget } from '../data/Exporters';
 import { ExportProgressOverlay } from './ExportProgressOverlay';
 import './ExportPane.css';
 
-export type ExportPaneExportType = 'playlist' | 'json';
+export type ExportPaneExportType = 'playlist' | 'json' | 'queue';
+type DeviceWithId = Device & { id: string };
 
 interface ExportPaneProps {
   sdk: SpotifyApi;
@@ -35,6 +37,11 @@ export function ExportPane({
   const [filteredTrackCount, setFilteredTrackCount] = useState<number | null>(null);
   const [lastCreatedPlaylistId, setLastCreatedPlaylistId] = useState<string | null>(null);
 
+  const [availableDevices, setAvailableDevices] = useState<DeviceWithId[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
+  const [deviceError, setDeviceError] = useState<string | null>(null);
+
   const [progressDescription, setProgressDescription] = useState('');
   const [progressCompleted, setProgressCompleted] = useState(0);
   const [progressTracksProcessed, setProgressTracksProcessed] = useState(0);
@@ -44,6 +51,12 @@ export function ExportPane({
   const [completionSpotifyId, setCompletionSpotifyId] = useState<string | null>(null);
 
   const hasRemix = Boolean(remixContainer);
+  const selectedQueueDevice = useMemo(() => {
+    if (!selectedDeviceId) {
+      return null;
+    }
+    return availableDevices.find(device => device.id === selectedDeviceId) ?? null;
+  }, [availableDevices, selectedDeviceId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +88,65 @@ export function ExportPane({
     };
   }, [remixContainer, excludedTrackIds]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDevices = async () => {
+      setIsLoadingDevices(true);
+      setDeviceError(null);
+      try {
+        const [devicesResponse, playbackState] = await Promise.all([
+          sdk.player.getAvailableDevices(),
+          sdk.player.getPlaybackState()
+        ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const devicesWithId = (devicesResponse.devices ?? []).filter(
+          (device): device is DeviceWithId => Boolean(device.id)
+        );
+
+        setAvailableDevices(devicesWithId);
+
+        if (devicesWithId.length === 0) {
+          setSelectedDeviceId(null);
+          return;
+        }
+
+        const activeDeviceId = playbackState?.device?.id ?? null;
+        const fallbackId =
+          activeDeviceId && devicesWithId.some(device => device.id === activeDeviceId)
+            ? activeDeviceId
+            : devicesWithId.find(device => device.is_active)?.id ?? devicesWithId[0]?.id ?? null;
+
+        setSelectedDeviceId(prev => {
+          if (prev && devicesWithId.some(device => device.id === prev)) {
+            return prev;
+          }
+          return fallbackId;
+        });
+      } catch (error) {
+        console.error('ExportPane: failed to load Spotify devices', error);
+        if (!cancelled) {
+          setDeviceError('Unable to load your Spotify devices. Start playback in Spotify and try again.');
+          setAvailableDevices([]);
+          setSelectedDeviceId(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingDevices(false);
+        }
+      }
+    };
+
+    loadDevices();
+    return () => {
+      cancelled = true;
+    };
+  }, [sdk]);
+
   const handleExportTypeChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setExportType(event.target.value as ExportPaneExportType);
   };
@@ -86,6 +158,11 @@ export function ExportPane({
 
   const handlePlaylistDescriptionChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setPlaylistDescription(event.target.value);
+  };
+
+  const handleQueueDeviceChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const value = event.target.value;
+    setSelectedDeviceId(value ? value : null);
   };
 
   const handleDismissCompletion = () => {
@@ -156,6 +233,48 @@ export function ExportPane({
         setCompletionMessage(`Successfully exported ${filteredTracks.length} tracks to JSON file`);
         setCompletionSpotifyId(null);
         setIsCompleted(true);
+      } else if (exportType === 'queue') {
+        if (!selectedQueueDevice) {
+          alert('Select an active Spotify device before queueing tracks.');
+          setIsExporting(false);
+          return;
+        }
+
+        const queueTarget = new QueueExportTarget(sdk, {
+          deviceId: selectedQueueDevice.id,
+          deviceName: selectedQueueDevice.name
+        });
+        const totalQueueTracks = filteredTracks.length;
+        const overallDescription = queueTarget.getOverallDescription();
+
+        progressHandler(
+          `${overallDescription}: ${queueTarget.getInitializationDescription()}`,
+          0,
+          0
+        );
+        await queueTarget.initialize();
+
+        let queuedTracks = 0;
+        for (const track of filteredTracks) {
+          const nextTrackNumber = queuedTracks + 1;
+          const inProgressDescription = `${overallDescription}: Queuing track ${nextTrackNumber}/${totalQueueTracks}`;
+          const inProgressCompletion = totalQueueTracks > 0 ? queuedTracks / totalQueueTracks : 0;
+          progressHandler(inProgressDescription, inProgressCompletion, queuedTracks);
+
+          await queueTarget.addTracks([track]);
+
+          queuedTracks += 1;
+          const afterDescription = `${overallDescription}: Queued track ${queuedTracks}/${totalQueueTracks}`;
+          const afterCompletion = totalQueueTracks > 0 ? queuedTracks / totalQueueTracks : 1;
+          progressHandler(afterDescription, afterCompletion, queuedTracks);
+        }
+
+        progressHandler(`${overallDescription}: Complete`, 1, totalQueueTracks);
+        const suffix = filteredTracks.length === 1 ? '' : 's';
+        const deviceLabel = selectedQueueDevice.name ?? 'your device';
+        setCompletionMessage(`Queued ${filteredTracks.length} track${suffix} on ${deviceLabel}`);
+        setCompletionSpotifyId(null);
+        setIsCompleted(true);
       } else {
         const playlistTarget = new PlaylistExportTarget(sdk, {
           name: playlistName,
@@ -191,16 +310,26 @@ export function ExportPane({
       setProgressTracksProcessed(0);
       setProgressTotalTracks(0);
     }
-  }, [createProgressHandler, exportType, getFilteredTracks, playlistDescription, playlistName, remixContainer, sdk]);
+  }, [createProgressHandler, exportType, getFilteredTracks, playlistDescription, playlistName, remixContainer, sdk, selectedQueueDevice]);
 
   const actionButtonLabel = useMemo(() => {
     if (isExporting) {
       return 'Exporting...';
     }
-    return exportType === 'json' ? 'Download JSON' : 'Create Playlist';
+    switch (exportType) {
+      case 'json':
+        return 'Download JSON';
+      case 'queue':
+        return 'Queue Tracks';
+      default:
+        return 'Create Playlist';
+    }
   }, [exportType, isExporting]);
 
-  const disableExportButton = !hasRemix || filteredTrackCount === 0;
+  const disableExportButton =
+    !hasRemix ||
+    filteredTrackCount === 0 ||
+    (exportType === 'queue' && (!selectedQueueDevice || isLoadingDevices || Boolean(deviceError)));
 
   const trackCountLabel = filteredTrackCount === null
     ? 'Export tracks to'
@@ -260,6 +389,7 @@ export function ExportPane({
               onChange={handleExportTypeChange}
             >
               <option value="playlist">Spotify Playlist</option>
+              <option value="queue">Spotify Queue</option>
               <option value="json">JSON Export</option>
             </select>
           </div>
@@ -312,6 +442,47 @@ export function ExportPane({
                 </button>
               </div>
             </div>
+          )}
+
+          {exportType === 'queue' && (
+            <>
+              <div className="export-group">
+                <label className="control-label" htmlFor="queue-device-select">
+                  Choose a Spotify device
+                </label>
+                {deviceError && <p className="export-feedback export-feedback--error">{deviceError}</p>}
+                {!deviceError && !isLoadingDevices && availableDevices.length === 0 && (
+                  <p className="export-feedback">No active Spotify devices were found.</p>
+                )}
+                <select
+                  id="queue-device-select"
+                  className="control-select"
+                  value={selectedDeviceId ?? ''}
+                  onChange={handleQueueDeviceChange}
+                  disabled={isLoadingDevices || availableDevices.length === 0 || Boolean(deviceError)}
+                >
+                  <option value="" disabled>
+                    {isLoadingDevices ? 'Loading devices…' : 'Select a device'}
+                  </option>
+                  {availableDevices.map(device => (
+                    <option key={device.id} value={device.id}>
+                      {device.name}
+                      {device.is_active ? ' (active)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="export-hint">
+                  Start playback in Spotify to refresh the available device list. Only recent active devices can be queued.
+                </p>
+              </div>
+              <div className="export-info">
+                <p>
+                  Tracks will be appended to the queue of your selected Spotify device. Spotify does not allow removing or reordering
+                  queue items via the API, so clear your queue manually if needed before exporting.
+                </p>
+                <p className="export-info__hint">Start playback on the device you want to queue before running this export.</p>
+              </div>
+            </>
           )}
 
           <div className="export-actions">
