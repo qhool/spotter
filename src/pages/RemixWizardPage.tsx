@@ -127,7 +127,7 @@ export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
           navSlot={navSlot}
           responsiveBreakpoints={[
             { minWidth: 1440, panes: 3 },
-            { minWidth: 960, panes: 2 },
+            { minWidth: 820, panes: 2 },
             { minWidth: 0, panes: 1 }
           ]}
         />
