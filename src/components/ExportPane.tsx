@@ -1,5 +1,5 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ListSelect, ArrowRightTagSolid, XmarkCircle } from 'iconoir-react';
+import { ListSelect, XmarkCircle } from 'iconoir-react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import type { Device } from '@spotify/web-api-ts-sdk';
 import { RemixContainer } from '../data/TrackContainer';
@@ -7,18 +7,11 @@ import { RemixOptions } from '../data/RemixFunctions';
 import { ExportController, ProgressHandler } from '../data/ExportController';
 import { JSONExportTarget, PlaylistExportTarget, QueueExportTarget } from '../data/Exporters';
 import { ExportProgressOverlay } from './ExportProgressOverlay';
+import { PlaylistPicker, PlaylistSummary } from './PlaylistPicker';
 import './ExportPane.css';
 
 export type ExportPaneExportType = 'playlist' | 'json' | 'queue';
 type DeviceWithId = Device & { id: string };
-interface PlaylistSummary {
-  id: string;
-  name: string;
-  description?: string | null;
-  ownerName?: string | null;
-  imageUrl?: string | null;
-  trackCount?: number;
-}
 
 interface ExportPaneProps {
   sdk: SpotifyApi;
@@ -225,21 +218,6 @@ export function ExportPane({
       fetchUserPlaylists();
     }
   }, [fetchUserPlaylists, isLoadingPlaylists, isPlaylistPickerOpen, playlistLoadError, playlistOptions.length]);
-
-  useEffect(() => {
-    if (!isPlaylistPickerOpen) {
-      return;
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closePlaylistPicker();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [closePlaylistPicker, isPlaylistPickerOpen]);
 
   const clearTrackLimitDismissTimer = useCallback(() => {
     if (trackLimitDismissTimeout.current) {
@@ -874,68 +852,15 @@ export function ExportPane({
       </div>
     </div>
 
-          {isPlaylistPickerOpen && (
-            <div className="playlist-picker-overlay" role="dialog" aria-modal="true">
-              <div className="playlist-picker-backdrop" onClick={closePlaylistPicker} aria-hidden="true" />
-              <div className="playlist-picker-panel">
-                <div className="playlist-picker-header">
-                  <div>
-                    <p className="playlist-picker-label">Export destination</p>
-                    <h3>Select an existing playlist</h3>
-                  </div>
-                  <button type="button" className="text-button" onClick={closePlaylistPicker}>
-                    Cancel
-                  </button>
-                </div>
-                <div className="playlist-picker-body">
-                  {isLoadingPlaylists && <p className="playlist-picker-status">Loading your playlists…</p>}
-
-                  {!isLoadingPlaylists && playlistLoadError && (
-                    <div className="playlist-picker-status">
-                      <p>{playlistLoadError}</p>
-                      <button type="button" className="text-button" onClick={() => fetchUserPlaylists()}>
-                        Try again
-                      </button>
-                    </div>
-                  )}
-
-                  {!isLoadingPlaylists && !playlistLoadError && playlistOptions.length === 0 && (
-                    <p className="playlist-picker-status">You don’t have any playlists yet.</p>
-                  )}
-
-                  {!isLoadingPlaylists && !playlistLoadError && playlistOptions.length > 0 && (
-                    <ul className="playlist-picker-list">
-                      {playlistOptions.map((playlist) => (
-                        <li key={playlist.id}>
-                          <button
-                            type="button"
-                            className="playlist-picker-item"
-                            onClick={() => handlePlaylistSelect(playlist)}
-                          >
-                            <div className="playlist-picker-item__info">
-                              {playlist.imageUrl ? (
-                                <img src={playlist.imageUrl} alt="" role="presentation" />
-                              ) : (
-                                <div className="playlist-picker-item__thumb-placeholder" aria-hidden="true" />
-                              )}
-                              <div>
-                                <span className="playlist-picker-item__name">{playlist.name}</span>
-                                <span className="playlist-picker-item__meta">
-                                  {playlist.ownerName ? `by ${playlist.ownerName}` : 'Owned by you'}
-                                  {playlist.trackCount != null && ` • ${playlist.trackCount} tracks`}
-                                </span>
-                              </div>
-                            </div>
-                            <ArrowRightTagSolid aria-hidden="true" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          <PlaylistPicker
+            isOpen={isPlaylistPickerOpen}
+            isLoading={isLoadingPlaylists}
+            error={playlistLoadError}
+            playlists={playlistOptions}
+            onClose={closePlaylistPicker}
+            onRetry={fetchUserPlaylists}
+            onSelect={handlePlaylistSelect}
+          />
         </>
   );
 }
