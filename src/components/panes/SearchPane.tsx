@@ -1,16 +1,16 @@
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { PlusCircle, Search as SearchIcon, XmarkCircle } from 'iconoir-react';
-import { ItemTile, ContentType } from './ItemTile';
-import { ButtonTile } from './ButtonTile';
-import { LoadingAnimation } from './LoadingAnimation';
+import { ItemTile, ContentType } from '../tiles/ItemTile';
+import { ButtonTile } from '../tiles/ButtonTile';
+import { LoadingAnimation } from '../widgets/LoadingAnimation';
 import './SearchPane.css';
 import {
   TrackContainer,
   PlaylistContainer,
   AlbumContainer,
   LikedSongsContainer
-} from '../data/TrackContainer';
+} from '../../data/TrackContainer';
 
 export interface SearchPaneProps {
   sdk: SpotifyApi;

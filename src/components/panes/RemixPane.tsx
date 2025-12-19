@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { RefreshCircleSolid } from 'iconoir-react';
 import { TrackListPane } from './TrackListPane';
-import { TrackContainer, RemixContainer } from '../data/TrackContainer';
-import { RemixMethod, RemixOptions, getRemixFunction } from '../data/RemixFunctions';
+import { TrackContainer, RemixContainer } from '../../data/TrackContainer';
+import { RemixMethod, RemixOptions, getRemixFunction } from '../../data/RemixFunctions';
 
 interface RemixPaneProps {
   sdk: SpotifyApi;

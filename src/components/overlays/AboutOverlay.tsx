@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { LoadingAnimation } from './LoadingAnimation';
+import { LoadingAnimation } from '../widgets/LoadingAnimation';
 import './AboutOverlay.css';
 
 interface AboutOverlayProps {

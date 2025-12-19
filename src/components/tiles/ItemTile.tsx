@@ -1,5 +1,5 @@
 import './ItemTile.css';
-import { TrackContainer } from '../data/TrackContainer';
+import { TrackContainer } from '../../data/TrackContainer';
 import { ReactNode } from 'react';
 
 export type ContentType = 'playlist' | 'album';

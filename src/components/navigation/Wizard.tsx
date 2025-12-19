@@ -1,7 +1,7 @@
 import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SlideNav } from './SlideNav';
-import { ArrayMap } from '../data/ArrayMap';
+import { SlideNav } from '../navigation/SlideNav';
+import { ArrayMap } from '../../data/ArrayMap';
 import './Wizard.css';
 
 const classNames = (...classes: Array<string | false | null | undefined>) =>

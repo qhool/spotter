@@ -1,8 +1,8 @@
 import { Track } from '@spotify/web-api-ts-sdk';
-import { TrackContainer } from '../data/TrackContainer';
+import { TrackContainer } from '../../data/TrackContainer';
 import { useState, useEffect } from 'react';
 import { Computer, CloudSync } from 'iconoir-react';
-import { LoadingAnimation } from './LoadingAnimation';
+import { LoadingAnimation } from '../widgets/LoadingAnimation';
 import './TrackList.css';
 
 interface TrackListProps {

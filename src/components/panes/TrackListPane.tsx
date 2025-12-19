@@ -1,7 +1,7 @@
 import { ReactNode, useMemo } from 'react';
-import { TrackList } from './TrackList';
-import { RemixContainer } from '../data/TrackContainer';
-import { RemixOptions } from '../data/RemixFunctions';
+import { TrackList } from '../containers/TrackList';
+import { RemixContainer } from '../../data/TrackContainer';
+import { RemixOptions } from '../../data/RemixFunctions';
 import './TrackListPane.css';
 
 interface TrackListPaneProps {

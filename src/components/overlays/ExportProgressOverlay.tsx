@@ -1,5 +1,5 @@
 import './ExportProgressOverlay.css';
-import { LoadingAnimation } from './LoadingAnimation';
+import { LoadingAnimation } from '../widgets/LoadingAnimation';
 
 interface ExportProgressOverlayProps {
   description: string;

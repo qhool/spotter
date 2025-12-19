@@ -4,7 +4,7 @@ import { Scopes, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState } from 'react';
 import { TestbedPage } from './pages/TestbedPage';
 import { RemixWizardPage } from './pages/RemixWizardPage';
-import { HamburgerMenu } from './components/HamburgerMenu';
+import { HamburgerMenu } from './components/navigation/HamburgerMenu';
 import './App.css';
 
 type Page = 'remix-wizard' | 'testbed';

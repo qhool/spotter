@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Menu, LogOut, TestTubeSolid, UserCircle, InfoCircle } from 'iconoir-react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { AboutOverlay } from './AboutOverlay';
+import { AboutOverlay } from '../overlays/AboutOverlay';
 import './HamburgerMenu.css';
 
 interface HamburgerMenuProps {

@@ -1,12 +1,12 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState, useMemo, useCallback } from 'react';
-import { Wizard, WizardPane, WizardViewTitles } from '../components/Wizard';
-import { SearchPane } from '../components/SearchPane';
+import { Wizard, WizardPane, WizardViewTitles } from '../components/navigation/Wizard';
+import { SearchPane } from '../components/panes/SearchPane';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
-import { SelectedItemsPane } from '../components/SelectedItemsPane';
-import { RemixPane } from '../components/RemixPane';
+import { SelectedItemsPane } from '../components/panes/SelectedItemsPane';
+import { RemixPane } from '../components/panes/RemixPane';
 import { RemixOptions } from '../data/RemixFunctions';
-import { ExportPane } from '../components/ExportPane';
+import { ExportPane } from '../components/panes/ExportPane';
 import './RemixWizardPage.css';
 
 interface RemixWizardPageProps {

@@ -1,8 +1,8 @@
 import { ReactNode, useCallback } from 'react';
-import { TrackContainer } from '../data/TrackContainer';
-import { ItemTile, ContentType } from './ItemTile';
+import { TrackContainer } from '../../data/TrackContainer';
+import { ItemTile, ContentType } from '../tiles/ItemTile';
 import { TrashSolid } from 'iconoir-react';
-import { DragReorderContainer } from './DragReorderContainer';
+import { DragReorderContainer } from '../containers/DragReorderContainer';
 import './SelectedItemsPane.css';
 
 interface SelectedItemsPaneProps {
