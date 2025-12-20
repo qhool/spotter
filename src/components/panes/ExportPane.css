@@ -47,56 +47,6 @@
   flex: 0 0 auto;
 }
 
-.track-limit-control {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.track-limit-button {
-  background-color: transparent;
-  border: 1px solid transparent;
-  color: #1db954;
-  font-weight: 600;
-  font-size: 0.95rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.35rem;
-  cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.track-limit-button:hover:not(:disabled),
-.track-limit-button:focus-visible {
-  color: #1ed760;
-  border-color: rgba(29, 185, 84, 0.5);
-  background-color: rgba(29, 185, 84, 0.1);
-}
-
-.track-limit-button:disabled {
-  color: #888;
-  cursor: not-allowed;
-}
-
-.track-limit-popover {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 0;
-  z-index: 5;
-  background-color: #151515;
-  border: 1px solid #333;
-  border-radius: 0.5rem;
-  padding: 0.65rem;
-  min-width: 220px;
-  max-width: min(260px, 70vw);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
-}
-
-.track-limit-slider {
-  width: 100%;
-  accent-color: #1db954;
-}
-
 .export-group {
   display: flex;
   flex-direction: column;
@@ -411,10 +361,6 @@
     font-size: 0.9rem;
   }
 
-  .track-limit-popover {
-    width: 100%;
-    min-width: 0;
-  }
 }
 
 @media (max-width: 480px) {
