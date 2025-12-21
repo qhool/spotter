@@ -394,12 +394,144 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
   public coverImage?: { url: string; width?: number; height?: number };
   public type: 'playlist' | 'album' | 'liked-songs' = 'playlist';
   private _maxItems: number;
+  private static readonly STORAGE_KEY = 'spotter-recent-tracks-cache';
+  private static readonly LOCAL_CURSOR_PREFIX = 'local:';
+  private _storedTracks: PlayHistory[] = [];
+  private _storageLoaded = false;
 
   constructor(sdk: SpotifyApi, maxItems: number = 1000) {
     super(sdk);
     this._maxItems = maxItems;
     // Use a local image for recent tracks with proper base URL resolution
     this.coverImage = { url: resolveAssetUrl('/images/recent-tracks.png') };
+    this._ensureStoredTracksLoaded();
+  }
+
+  private _storage(): Storage | null {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return null;
+    }
+    return window.localStorage;
+  }
+
+  private _ensureStoredTracksLoaded(): void {
+    if (this._storageLoaded) {
+      return;
+    }
+    this._storageLoaded = true;
+    const storage = this._storage();
+    if (!storage) {
+      return;
+    }
+    const raw = storage.getItem(RecentTracksContainer.STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as PlayHistory[];
+      if (Array.isArray(parsed)) {
+        this._storedTracks = parsed;
+        this._trimStoredTracks();
+      }
+    } catch (error) {
+      console.warn('Failed to parse recent tracks cache:', error);
+    }
+  }
+
+  private _persistStoredTracks(): void {
+    const storage = this._storage();
+    if (!storage) {
+      return;
+    }
+    try {
+      storage.setItem(RecentTracksContainer.STORAGE_KEY, JSON.stringify(this._storedTracks));
+    } catch (error) {
+      console.warn('Failed to persist recent tracks cache:', error);
+    }
+  }
+
+  private _trimStoredTracks(): void {
+    if (this._storedTracks.length > this._maxItems) {
+      this._storedTracks.length = this._maxItems;
+    }
+  }
+
+  private _trackKey(entry: PlayHistory): string {
+    const playedAt = entry.played_at ?? 'unknown';
+    const contextUri = entry.context?.uri ?? 'none';
+    return `${playedAt}|${contextUri}`;
+  }
+
+  private _isLocalCursor(cursor: Next): cursor is string {
+    return typeof cursor === 'string' && cursor.startsWith(RecentTracksContainer.LOCAL_CURSOR_PREFIX);
+  }
+
+  private _parseLocalCursor(cursor: string): number {
+    const value = Number(cursor.slice(RecentTracksContainer.LOCAL_CURSOR_PREFIX.length));
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  }
+
+  private _localCursor(index: number): string {
+    return `${RecentTracksContainer.LOCAL_CURSOR_PREFIX}${index}`;
+  }
+
+  private _getStoredSlice(limit: number, startIndex: number): RawTrackResponse<PlayHistory> {
+    const boundedStart = Math.max(0, startIndex);
+    const end = Math.min(boundedStart + limit, this._storedTracks.length);
+    const items = this._storedTracks.slice(boundedStart, end);
+    const nextIndex = end < this._storedTracks.length ? end : null;
+    return {
+      items,
+      total: this._storedTracks.length,
+      next: nextIndex === null ? null : this._localCursor(nextIndex)
+    };
+  }
+
+  private _mergeFetchedTracks(fetched: PlayHistory[]): { items: PlayHistory[]; nextCursor: Next } {
+    if (!fetched.length) {
+      return { items: [], nextCursor: this._storedTracks.length ? this._localCursor(0) : null };
+    }
+
+    const keyToIndex = new Map<string, number>();
+    for (let i = 0; i < this._storedTracks.length; i++) {
+      keyToIndex.set(this._trackKey(this._storedTracks[i]), i);
+    }
+
+    const newTracks: PlayHistory[] = [];
+    let matchIndex: number | null = null;
+
+    for (let i = 0; i < fetched.length; i++) {
+      const entry = fetched[i];
+      const key = this._trackKey(entry);
+      if (keyToIndex.has(key)) {
+        matchIndex = keyToIndex.get(key)!;
+        break;
+      }
+      newTracks.push(entry);
+    }
+
+    if (newTracks.length) {
+      for (let i = newTracks.length - 1; i >= 0; i--) {
+        this._storedTracks.unshift(newTracks[i]);
+      }
+      this._trimStoredTracks();
+      this._persistStoredTracks();
+    }
+
+    if (!this._storedTracks.length) {
+      this._storedTracks = [...fetched];
+      this._trimStoredTracks();
+      this._persistStoredTracks();
+    }
+
+    if (matchIndex !== null) {
+      const shiftedIndex = matchIndex + newTracks.length;
+      if (shiftedIndex < this._storedTracks.length) {
+        return { items: newTracks, nextCursor: this._localCursor(shiftedIndex) };
+      }
+    }
+
+    return { items: newTracks.length ? newTracks : fetched, nextCursor: null };
   }
 
   protected _standardizeTrack(rawTrack: PlayHistory): Track {
@@ -407,15 +539,25 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
   }
 
   protected async _getTracks(limit: number = 50, before: string | 0): Promise<RawTrackResponse<PlayHistory>> {
-    const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
-    const range: any = before === 0 ? undefined : { type: 'before', timestamp: before };
+    this._ensureStoredTracksLoaded();
 
-    const response = await this.sdk.player.getRecentlyPlayedTracks(validLimit, range)
-    
+    if (this._isLocalCursor(before)) {
+      const startIndex = this._parseLocalCursor(before);
+      return this._getStoredSlice(limit, startIndex);
+    }
+
+    const validLimit = Math.min(Math.max(limit, 1), 50) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 | 41 | 42 | 43 | 44 | 45 | 46 | 47 | 48 | 49 | 50;
+    const apiCursor = before === 0 ? undefined : before;
+    const range = apiCursor ? { type: 'before', timestamp: apiCursor } : undefined;
+
+    const response = await this.sdk.player.getRecentlyPlayedTracks(validLimit, range as any);
+    const { items, nextCursor } = this._mergeFetchedTracks(response.items);
+    const total = this._storedTracks.length || this._maxItems;
+
     return {
-      items: response.items,
-      total: this._maxItems,
-      next: response.cursors?.before
+      items,
+      total,
+      next: nextCursor ?? response.cursors?.before ?? null
     };
   }
 }

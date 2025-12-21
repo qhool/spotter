@@ -1,0 +1,120 @@
+.recent-tracks-page {
+  flex: 1;
+  min-height: 0;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: radial-gradient(circle at 10% 20%, rgba(80, 203, 253, 0.18), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(255, 95, 162, 0.1), transparent 40%),
+    #05060a;
+  color: #f5f7fb;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow: hidden;
+}
+
+.recent-tracks-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.5rem;
+  border-radius: 20px;
+  background: rgba(13, 16, 24, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 25px 60px rgba(5, 6, 10, 0.35);
+}
+
+.recent-tracks-toolbar__count {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(245, 247, 251, 0.9);
+}
+
+.recent-tracks-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.recent-tracks-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(120deg, #31e1f7, #9155ff);
+  color: #05060a;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.recent-tracks-refresh:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(49, 225, 247, 0.35);
+}
+
+.recent-tracks-refresh:active {
+  transform: translateY(0);
+}
+
+.recent-tracks-refresh__icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.recent-tracks-toolbar__meta {
+  font-size: 0.9rem;
+  color: rgba(245, 247, 251, 0.7);
+}
+
+.recent-tracks-panel {
+  background: rgba(6, 8, 14, 0.9);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 25px 60px rgba(5, 6, 10, 0.35);
+  padding: clamp(1rem, 2.5vw, 2rem);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.recent-tracks-panel__body {
+  backdrop-filter: blur(6px);
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.nav-slot-recent-tracks {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #05060a;
+  background: #fff;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+}
+
+.nav-slot-recent-tracks__icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+@media (max-width: 640px) {
+  .recent-tracks-refresh {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .recent-tracks-toolbar {
+    padding: 1rem;
+  }
+}

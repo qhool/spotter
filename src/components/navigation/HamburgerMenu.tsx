@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Menu, LogOut, TestTubeSolid, UserCircle, InfoCircle } from 'iconoir-react';
+import { Shuffle, Clock, LogOut, TestTubeSolid, UserCircle, InfoCircle } from 'iconoir-react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { AboutOverlay } from '../overlays/AboutOverlay';
 import './HamburgerMenu.css';
@@ -7,7 +7,8 @@ import './HamburgerMenu.css';
 interface HamburgerMenuProps {
   sdk: SpotifyApi;
   onTestbedClick: () => void;
-  onMainAppClick?: () => void;
+  onRemixWizardClick?: () => void;
+  onRecentTracksClick?: () => void;
 }
 
 interface UserProfile {
@@ -17,7 +18,7 @@ interface UserProfile {
   followers?: { total: number };
 }
 
-export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: HamburgerMenuProps) {
+export function HamburgerMenu({ sdk, onTestbedClick, onRemixWizardClick, onRecentTracksClick }: HamburgerMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showAbout, setShowAbout] = useState(false);
@@ -135,13 +136,22 @@ export function HamburgerMenu({ sdk, onTestbedClick, onMainAppClick }: Hamburger
 
           {/* Menu Items */}
           <div className="menu-items">
-            {onMainAppClick && (
+            {onRemixWizardClick && (
               <button 
                 className="menu-item"
-                onClick={() => handleMenuNavigation(onMainAppClick)}
+                onClick={() => handleMenuNavigation(onRemixWizardClick)}
               >
-                <Menu className="menu-icon" />
-                Main App
+                <Shuffle className="menu-icon" />
+                Remix Playlists
+              </button>
+            )}
+            {onRecentTracksClick && (
+              <button 
+                className="menu-item"
+                onClick={() => handleMenuNavigation(onRecentTracksClick)}
+              >
+                <Clock className="menu-icon" />
+                Recently Played
               </button>
             )}
             <button 

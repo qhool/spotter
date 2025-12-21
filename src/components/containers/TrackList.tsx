@@ -10,9 +10,16 @@ interface TrackListProps {
   refreshTrigger: number;
   excludedTrackIds?: Set<string>;
   setExcludedTrackIds?: React.Dispatch<React.SetStateAction<Set<string>>>;
+  onTracksLoaded?: (tracks: Track[]) => void;
 }
 
-export function TrackList({ trackContainer, refreshTrigger, excludedTrackIds = new Set(), setExcludedTrackIds }: TrackListProps) {
+export function TrackList({
+  trackContainer,
+  refreshTrigger,
+  excludedTrackIds = new Set(),
+  setExcludedTrackIds,
+  onTracksLoaded
+}: TrackListProps) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,10 +48,12 @@ export function TrackList({ trackContainer, refreshTrigger, excludedTrackIds = n
       try {
         const allTracks = await trackContainer.getAllTracks();
         setTracks(allTracks);
+        onTracksLoaded?.(allTracks);
       } catch (err) {
         console.error('Failed to load tracks:', err);
         setError('Failed to load tracks');
         setTracks([]);
+        onTracksLoaded?.([]);
       } finally {
         setLoading(false);
       }
@@ -53,7 +62,7 @@ export function TrackList({ trackContainer, refreshTrigger, excludedTrackIds = n
     if (trackContainer) {
       loadAllTracks();
     }
-  }, [trackContainer, refreshTrigger]);
+  }, [trackContainer, refreshTrigger, onTracksLoaded]);
   // Format duration from milliseconds to [HH:]MM:SS.ss
   const formatDuration = (durationMs: number): string => {
     const totalSeconds = durationMs / 1000;

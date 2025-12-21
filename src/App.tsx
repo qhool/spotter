@@ -4,10 +4,11 @@ import { Scopes, SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState } from 'react';
 import { TestbedPage } from './pages/TestbedPage';
 import { RemixWizardPage } from './pages/RemixWizardPage';
+import { RecentTracksPage } from './pages/RecentTracksPage';
 import { HamburgerMenu } from './components/navigation/HamburgerMenu';
 import './App.css';
 
-type Page = 'remix-wizard' | 'testbed';
+type Page = 'remix-wizard' | 'recent-tracks' | 'testbed';
 
 function App() {
   const sdk = useSpotify(
@@ -32,7 +33,8 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
           <HamburgerMenu 
             sdk={sdk}
             onTestbedClick={() => setCurrentPage('testbed')}
-            onMainAppClick={() => setCurrentPage('remix-wizard')}
+            onRemixWizardClick={() => setCurrentPage('remix-wizard')}
+            onRecentTracksClick={() => setCurrentPage('recent-tracks')}
           />
         </div>
         <div className="nav-center">
@@ -44,6 +46,12 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
       <main className="main-content">
         {currentPage === 'remix-wizard' && (
           <RemixWizardPage 
+            sdk={sdk}
+            navSlot={navSlot}
+          />
+        )}
+        {currentPage === 'recent-tracks' && (
+          <RecentTracksPage 
             sdk={sdk}
             navSlot={navSlot}
           />
