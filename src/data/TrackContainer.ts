@@ -398,6 +398,7 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
   private static readonly LOCAL_CURSOR_PREFIX = 'local:';
   private _storedTracks: PlayHistory[] = [];
   private _storageLoaded = false;
+  private _lastUpdated: Date | null = null;
 
   constructor(sdk: SpotifyApi, maxItems: number = 1000) {
     super(sdk);
@@ -405,6 +406,10 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
     // Use a local image for recent tracks with proper base URL resolution
     this.coverImage = { url: resolveAssetUrl('/images/recent-tracks.png') };
     this._ensureStoredTracksLoaded();
+  }
+
+  public getLastUpdated(): Date | null {
+    return this._lastUpdated;
   }
 
   private _storage(): Storage | null {
@@ -428,11 +433,21 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
       return;
     }
     try {
-      const parsed = JSON.parse(raw) as PlayHistory[];
+      const parsed = JSON.parse(raw);
+
       if (Array.isArray(parsed)) {
         this._storedTracks = parsed;
-        this._trimStoredTracks();
+      } else if (parsed && Array.isArray(parsed.tracks)) {
+        this._storedTracks = parsed.tracks;
+        if (parsed.updatedAt) {
+          const parsedDate = new Date(parsed.updatedAt);
+          if (!isNaN(parsedDate.getTime())) {
+            this._lastUpdated = parsedDate;
+          }
+        }
       }
+
+      this._trimStoredTracks();
     } catch (error) {
       console.warn('Failed to parse recent tracks cache:', error);
     }
@@ -444,7 +459,11 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
       return;
     }
     try {
-      storage.setItem(RecentTracksContainer.STORAGE_KEY, JSON.stringify(this._storedTracks));
+      const payload = {
+        tracks: this._storedTracks,
+        updatedAt: this._lastUpdated ? this._lastUpdated.toISOString() : null
+      };
+      storage.setItem(RecentTracksContainer.STORAGE_KEY, JSON.stringify(payload));
     } catch (error) {
       console.warn('Failed to persist recent tracks cache:', error);
     }
@@ -489,6 +508,8 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
 
   private _mergeFetchedTracks(fetched: PlayHistory[]): { items: PlayHistory[]; nextCursor: Next } {
     if (!fetched.length) {
+      this._lastUpdated = new Date();
+      this._persistStoredTracks();
       return { items: [], nextCursor: this._storedTracks.length ? this._localCursor(0) : null };
     }
 
@@ -515,14 +536,15 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
         this._storedTracks.unshift(newTracks[i]);
       }
       this._trimStoredTracks();
-      this._persistStoredTracks();
     }
 
     if (!this._storedTracks.length) {
       this._storedTracks = [...fetched];
       this._trimStoredTracks();
-      this._persistStoredTracks();
     }
+
+    this._lastUpdated = new Date();
+    this._persistStoredTracks();
 
     if (matchIndex !== null) {
       const shiftedIndex = matchIndex + newTracks.length;

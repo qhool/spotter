@@ -15,21 +15,24 @@ const RECENT_TRACKS_LIMIT = 1000;
 
 export function RecentTracksPage({ sdk, navSlot }: RecentTracksPageProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [trackCount, setTrackCount] = useState<number | null>(null);
 
   const recentTracksContainer = useMemo(
     () => new RecentTracksContainer(sdk, RECENT_TRACKS_LIMIT),
-    [sdk]
+    [sdk, refreshTrigger]
+  );
+
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(
+    () => recentTracksContainer.getLastUpdated()
   );
 
   useEffect(() => {
-    setLastUpdatedAt(new Date());
-  }, []);
+    setLastUpdatedAt(recentTracksContainer.getLastUpdated());
+  }, [recentTracksContainer]);
 
   const handleRefresh = useCallback(() => {
+    setTrackCount(null);
     setRefreshTrigger(prev => prev + 1);
-    setLastUpdatedAt(new Date());
   }, []);
 
   const formattedTimestamp = lastUpdatedAt
@@ -42,7 +45,8 @@ export function RecentTracksPage({ sdk, navSlot }: RecentTracksPageProps) {
 
   const handleTracksLoaded = useCallback((tracks: Track[]) => {
     setTrackCount(tracks.length);
-  }, []);
+    setLastUpdatedAt(recentTracksContainer.getLastUpdated());
+  }, [recentTracksContainer]);
 
   return (
     <div className="recent-tracks-page">
