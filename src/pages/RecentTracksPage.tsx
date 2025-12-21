@@ -1,39 +1,55 @@
-import { SpotifyApi, Track } from '@spotify/web-api-ts-sdk';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, Refresh } from 'iconoir-react';
 import { TrackList } from '../components/containers/TrackList';
 import { RecentTracksContainer } from '../data/TrackContainer';
+import { SyncController, SyncResult } from '../data/SyncController';
+import { RecentTracksSyncValue, RECENT_TRACKS_SYNC_NAME, DEFAULT_RECENT_TRACKS_MAX_ITEMS } from '../data/SyncFunctions';
+import { LoadingAnimation } from '../components/widgets/LoadingAnimation';
 import './RecentTracksPage.css';
 
 interface RecentTracksPageProps {
-  sdk: SpotifyApi;
   navSlot: Element | null;
+  syncController: SyncController;
+  recentTracksState: SyncResult<RecentTracksSyncValue> | null;
+  recentTracksSyncReady: boolean;
 }
 
-const RECENT_TRACKS_LIMIT = 1000;
+export function RecentTracksPage({
+  navSlot,
+  syncController,
+  recentTracksState,
+  recentTracksSyncReady
+}: RecentTracksPageProps) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const previousContainerRef = useRef<RecentTracksContainer | null>(null);
 
-export function RecentTracksPage({ sdk, navSlot }: RecentTracksPageProps) {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [trackCount, setTrackCount] = useState<number | null>(null);
-
-  const recentTracksContainer = useMemo(
-    () => new RecentTracksContainer(sdk, RECENT_TRACKS_LIMIT),
-    [sdk, refreshTrigger]
-  );
-
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(
-    () => recentTracksContainer.getLastUpdated()
-  );
+  const recentTracksContainer = recentTracksState?.value.container ?? null;
+  const trackCount = recentTracksState?.value.trackCount ?? null;
+  const lastUpdatedAt = recentTracksState?.lastUpdated ?? recentTracksContainer?.getLastUpdated() ?? null;
 
   useEffect(() => {
-    setLastUpdatedAt(recentTracksContainer.getLastUpdated());
+    if (recentTracksContainer && previousContainerRef.current !== recentTracksContainer) {
+      previousContainerRef.current = recentTracksContainer;
+      setRefreshKey(prev => prev + 1);
+    }
   }, [recentTracksContainer]);
 
   const handleRefresh = useCallback(() => {
-    setTrackCount(null);
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
+    if (isRefreshing || !recentTracksSyncReady) {
+      return;
+    }
+    setIsRefreshing(true);
+    syncController
+      .triggerSync(RECENT_TRACKS_SYNC_NAME)
+      .catch(error => {
+        console.error('Failed to refresh recent tracks:', error);
+      })
+      .finally(() => {
+        setIsRefreshing(false);
+      });
+  }, [isRefreshing, recentTracksSyncReady, syncController]);
 
   const formattedTimestamp = lastUpdatedAt
     ? lastUpdatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -41,12 +57,7 @@ export function RecentTracksPage({ sdk, navSlot }: RecentTracksPageProps) {
 
   const trackSummary = trackCount === null
     ? 'Loading tracks…'
-    : `${trackCount} most recent tracks (limit ${RECENT_TRACKS_LIMIT})`;
-
-  const handleTracksLoaded = useCallback((tracks: Track[]) => {
-    setTrackCount(tracks.length);
-    setLastUpdatedAt(recentTracksContainer.getLastUpdated());
-  }, [recentTracksContainer]);
+    : `${trackCount} most recent tracks (limit ${DEFAULT_RECENT_TRACKS_MAX_ITEMS})`;
 
   return (
     <div className="recent-tracks-page">
@@ -63,21 +74,31 @@ export function RecentTracksPage({ sdk, navSlot }: RecentTracksPageProps) {
       <section className="recent-tracks-toolbar" aria-live="polite">
         <p className="recent-tracks-toolbar__count">{trackSummary}</p>
         <div className="recent-tracks-toolbar__actions">
-          <button type="button" className="recent-tracks-refresh" onClick={handleRefresh}>
+          <button
+            type="button"
+            className="recent-tracks-refresh"
+            onClick={handleRefresh}
+            disabled={isRefreshing || !recentTracksSyncReady}
+          >
             <Refresh className="recent-tracks-refresh__icon" />
-            Refresh feed
+            {isRefreshing ? 'Refreshing…' : 'Refresh feed'}
           </button>
-          <span className="recent-tracks-toolbar__meta">Updated {formattedTimestamp}</span>
+          <span className="recent-tracks-toolbar__meta">
+            {isRefreshing ? 'Updating…' : `Updated ${formattedTimestamp}`}
+          </span>
         </div>
       </section>
 
       <section className="recent-tracks-panel" aria-live="polite">
         <div className="recent-tracks-panel__body">
-          <TrackList
-            trackContainer={recentTracksContainer}
-            refreshTrigger={refreshTrigger}
-            onTracksLoaded={handleTracksLoaded}
-          />
+          {recentTracksContainer ? (
+            <TrackList
+              trackContainer={recentTracksContainer}
+              refreshTrigger={refreshKey}
+            />
+          ) : (
+            <LoadingAnimation label="Loading recent tracks…" />
+          )}
         </div>
       </section>
     </div>

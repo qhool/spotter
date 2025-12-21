@@ -1,5 +1,6 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { useState, useMemo, useCallback } from 'react';
+import { SyncController } from '../data/SyncController';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/navigation/Wizard';
 import { SearchPane } from '../components/panes/SearchPane';
 import { TrackContainer, RemixContainer } from '../data/TrackContainer';
@@ -12,6 +13,7 @@ import './RemixWizardPage.css';
 interface RemixWizardPageProps {
   sdk: SpotifyApi;
   navSlot: Element | null;
+  syncController: SyncController;
 }
 
 export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
