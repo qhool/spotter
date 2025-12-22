@@ -11,6 +11,7 @@ interface RemixPaneProps {
   excludedTrackIds: Set<string>;
   setExcludedTrackIds: React.Dispatch<React.SetStateAction<Set<string>>>;
   onRemixContainerChange?: (container: RemixContainer<RemixOptions> | null) => void;
+  itemOptionsById?: Partial<Record<string, RemixOptions>>;
   className?: string;
 }
 
@@ -22,6 +23,7 @@ export function RemixPane({
   excludedTrackIds,
   setExcludedTrackIds,
   onRemixContainerChange,
+  itemOptionsById = {} as Partial<Record<string, RemixOptions>>,
   className
 }: RemixPaneProps) {
   const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
@@ -51,7 +53,7 @@ export function RemixPane({
 
     const inputs: [TrackContainer<any>, RemixOptions][] = selectedItems.map(item => [
       item,
-      {} as RemixOptions
+      itemOptionsById[item.id] ?? ({} as RemixOptions)
     ]);
     const remixFunction = getRemixFunction(remixMethod);
     const container = new RemixContainer(
@@ -63,7 +65,7 @@ export function RemixPane({
     );
     setRemixContainer(container);
     onRemixContainerChange?.(container);
-  }, [sdk, selectedItems, remixMethod, onRemixContainerChange]);
+  }, [sdk, selectedItems, remixMethod, onRemixContainerChange, itemOptionsById]);
 
   const controls = (
     <>

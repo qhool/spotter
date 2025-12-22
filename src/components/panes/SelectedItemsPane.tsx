@@ -13,6 +13,7 @@ interface SelectedItemsPaneProps {
   emptyMessage?: ReactNode;
   className?: string;
   disableDragToDelete?: boolean;
+  renderItemControls?: (item: TrackContainer<any>) => ReactNode;
 }
 
 const toContentType = (item: TrackContainer<any>): ContentType =>
@@ -25,7 +26,8 @@ export function SelectedItemsPane({
   title,
   emptyMessage = 'No items selected',
   className = '',
-  disableDragToDelete = true
+  disableDragToDelete = true,
+  renderItemControls
 }: SelectedItemsPaneProps) {
   const classes = ['selected-items-pane'];
   if (className) {
@@ -41,17 +43,20 @@ export function SelectedItemsPane({
         item={item}
         contentType={toContentType(item)}
         controls={
-          <button
-            className="control-button remove-button"
-            onClick={() => onRemoveItem(item.id)}
-            aria-label={`Remove ${item.name}`}
-          >
-            <TrashSolid />
-          </button>
+          <>
+            {renderItemControls?.(item)}
+            <button
+              className="control-button remove-button"
+              onClick={() => onRemoveItem(item.id)}
+              aria-label={`Remove ${item.name}`}
+            >
+              <TrashSolid />
+            </button>
+          </>
         }
       />
     ),
-    [onRemoveItem]
+    [onRemoveItem, renderItemControls]
   );
 
   return (

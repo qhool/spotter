@@ -1,5 +1,6 @@
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Substract } from 'iconoir-react';
 import { SyncController } from '../data/SyncController';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/navigation/Wizard';
 import { SearchPane } from '../components/panes/SearchPane';
@@ -21,6 +22,7 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(() => new Set());
+  const [itemOptionsById, setItemOptionsById] = useState<Partial<Record<string, RemixOptions>>>({});
 
   const handleRemixContainerChange = useCallback(
     (container: RemixContainer<RemixOptions> | null) => {
@@ -38,9 +40,82 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
     });
   }, []);
 
+  const handleToggleExcludeItem = useCallback((itemId: string) => {
+    setItemOptionsById(prev => {
+      const current = prev[itemId];
+      const nextIsExcluded = !(current?.excludeFromRemix);
+      const nextOptions = { ...(current ?? {}) };
+
+      if (nextIsExcluded) {
+        nextOptions.excludeFromRemix = true;
+      } else {
+        delete nextOptions.excludeFromRemix;
+      }
+
+      const nextMap = { ...prev } as Partial<Record<string, RemixOptions>>;
+      if (Object.keys(nextOptions).length === 0) {
+        delete nextMap[itemId];
+      } else {
+        nextMap[itemId] = nextOptions;
+      }
+
+      return nextMap;
+    });
+  }, []);
+
   const handleRemoveSelectedItem = useCallback((itemId: string) => {
     setSelectedItems(prev => prev.filter(item => item.id !== itemId));
+    setItemOptionsById(prev => {
+      if (!prev[itemId]) {
+        return prev;
+      }
+      const next = { ...prev } as Partial<Record<string, RemixOptions>>;
+      delete next[itemId];
+      return next;
+    });
   }, []);
+
+  useEffect(() => {
+    setItemOptionsById(prev => {
+      const selectedIds = new Set(selectedItems.map(item => item.id));
+      let changed = false;
+      const next: Partial<Record<string, RemixOptions>> = {};
+
+      for (const [itemId, options] of Object.entries(prev)) {
+        if (selectedIds.has(itemId)) {
+          next[itemId] = options;
+        } else {
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [selectedItems]);
+
+  const renderItemControls = useCallback(
+    (item: TrackContainer<any>) => {
+      const isExcluded = Boolean(itemOptionsById[item.id]?.excludeFromRemix);
+      const classNames = ['control-button', 'exclude-button'];
+      if (isExcluded) {
+        classNames.push('is-active');
+      }
+
+      return (
+        <button
+          type="button"
+          className={classNames.join(' ')}
+          onClick={() => handleToggleExcludeItem(item.id)}
+          aria-pressed={isExcluded}
+          aria-label={isExcluded ? `Include ${item.name}` : `Exclude ${item.name}`}
+          title={isExcluded ? 'Include in remix' : 'Exclude from remix'}
+        >
+          <Substract />
+        </button>
+      );
+    },
+    [itemOptionsById, handleToggleExcludeItem]
+  );
 
   const wizardViewTitles = useMemo<WizardViewTitles>(
     () => ({
@@ -75,6 +150,7 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
             title="Selected Items"
             emptyMessage="Add playlists or albums from the search results"
             disableDragToDelete={!panes.get('search')?.isVisible}
+            renderItemControls={renderItemControls}
           />
         )
       },
@@ -88,6 +164,7 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
             excludedTrackIds={excludedTrackIds}
             setExcludedTrackIds={setExcludedTrackIds}
             onRemixContainerChange={handleRemixContainerChange}
+            itemOptionsById={itemOptionsById}
           />
         )
       },
@@ -121,7 +198,9 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
       setExcludedTrackIds,
       handleRemixContainerChange,
       remixContainer,
-      recentTracksContainer
+      recentTracksContainer,
+      renderItemControls,
+      itemOptionsById
     ]
   );
 
