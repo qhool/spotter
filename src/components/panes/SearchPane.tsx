@@ -9,7 +9,8 @@ import {
   TrackContainer,
   PlaylistContainer,
   AlbumContainer,
-  LikedSongsContainer
+  LikedSongsContainer,
+  RecentTracksContainer
 } from '../../data/TrackContainer';
 
 export interface SearchPaneProps {
@@ -17,6 +18,7 @@ export interface SearchPaneProps {
   onAddItem: (item: TrackContainer<any>) => void;
   initialContentType?: ContentType;
   selectedItems?: TrackContainer<any>[];
+  recentTracksContainer?: RecentTracksContainer | null;
 }
 
 type SearchPage = {
@@ -30,7 +32,8 @@ export function SearchPane({
   sdk,
   onAddItem,
   initialContentType = 'playlist',
-  selectedItems = []
+  selectedItems = [],
+  recentTracksContainer
 }: SearchPaneProps) {
   const [contentType, setContentType] = useState<ContentType>(initialContentType);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +65,13 @@ export function SearchPane({
         const playlistContainers = userPlaylists.items
           .filter((playlist): playlist is NonNullable<typeof playlist> => playlist != null)
           .map(playlist => new PlaylistContainer(sdk, playlist));
-        results = [likedSongs as unknown as TrackContainer<any>, ...playlistContainers];
+        const personalItems: TrackContainer<any>[] = [
+          likedSongs as unknown as TrackContainer<any>
+        ];
+        if (recentTracksContainer) {
+          personalItems.push(recentTracksContainer as unknown as TrackContainer<any>);
+        }
+        results = [...personalItems, ...playlistContainers];
       } else {
         const savedAlbums = await sdk.currentUser.albums.savedAlbums();
         results = savedAlbums.items.map(savedAlbum =>
@@ -77,7 +86,7 @@ export function SearchPane({
     } finally {
       setLoading(false);
     }
-  }, [sdk, contentType]);
+  }, [sdk, contentType, recentTracksContainer]);
 
   const performSearch = useCallback(
     async (append = false) => {

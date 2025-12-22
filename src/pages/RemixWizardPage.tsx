@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { SyncController } from '../data/SyncController';
 import { Wizard, WizardPane, WizardViewTitles } from '../components/navigation/Wizard';
 import { SearchPane } from '../components/panes/SearchPane';
-import { TrackContainer, RemixContainer } from '../data/TrackContainer';
+import { TrackContainer, RemixContainer, RecentTracksContainer } from '../data/TrackContainer';
 import { SelectedItemsPane } from '../components/panes/SelectedItemsPane';
 import { RemixPane } from '../components/panes/RemixPane';
 import { RemixOptions } from '../data/RemixFunctions';
@@ -14,9 +14,10 @@ interface RemixWizardPageProps {
   sdk: SpotifyApi;
   navSlot: Element | null;
   syncController: SyncController;
+  recentTracksContainer?: RecentTracksContainer | null;
 }
 
-export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
+export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWizardPageProps) {
   const [selectedItems, setSelectedItems] = useState<TrackContainer<any>[]>([]);
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(() => new Set());
@@ -55,7 +56,12 @@ export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
         id: 'search',
         title: 'Search',
         render: () => (
-          <SearchPane sdk={sdk} selectedItems={selectedItems} onAddItem={handleAddSelectedItem} />
+          <SearchPane
+            sdk={sdk}
+            selectedItems={selectedItems}
+            onAddItem={handleAddSelectedItem}
+            recentTracksContainer={recentTracksContainer ?? undefined}
+          />
         )
       },
       {
@@ -114,7 +120,8 @@ export function RemixWizardPage({ sdk, navSlot }: RemixWizardPageProps) {
       excludedTrackIds,
       setExcludedTrackIds,
       handleRemixContainerChange,
-      remixContainer
+      remixContainer,
+      recentTracksContainer
     ]
   );
 

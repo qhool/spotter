@@ -31,6 +31,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   const syncController = useMemo(() => new SyncController(), []);
   const [recentTracksState, setRecentTracksState] = useState<SyncResult<RecentTracksSyncValue> | null>(null);
   const [recentTracksSyncReady, setRecentTracksSyncReady] = useState(false);
+  const recentTracksContainer = recentTracksState?.value?.container ?? null;
 
   useEffect(() => {
     return () => {
@@ -88,6 +89,7 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
             sdk={sdk}
             navSlot={navSlot}
             syncController={syncController}
+            recentTracksContainer={recentTracksContainer}
           />
         )}
         {currentPage === 'recent-tracks' && (
