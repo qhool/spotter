@@ -104,3 +104,18 @@
   min-height: 0;
   min-width: 0;
 }
+
+.search-results {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-results .playlist-container {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+}

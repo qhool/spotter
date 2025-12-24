@@ -1,0 +1,14 @@
+.paginated-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.paginated-list__actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.paginated-list__actions .text-button {
+  align-self: flex-start;
+}

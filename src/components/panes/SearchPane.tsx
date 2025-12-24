@@ -2,8 +2,8 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useMemo, useState } f
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
 import { PlusCircle, Search as SearchIcon, XmarkCircle } from 'iconoir-react';
 import { ItemTile, ContentType } from '../tiles/ItemTile';
-import { ButtonTile } from '../tiles/ButtonTile';
 import { LoadingAnimation } from '../widgets/LoadingAnimation';
+import { PaginatedList } from '../containers/PaginatedList';
 import './SearchPane.css';
 import {
   TrackContainer,
@@ -41,6 +41,12 @@ export function SearchPane({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchPage>(null);
+  const [personalPage, setPersonalPage] = useState<{ offset: number; limit: number; total: number | null }>({
+    offset: 0,
+    limit: 50,
+    total: null
+  });
+  const [personalHasMore, setPersonalHasMore] = useState(false);
   const trimmedQuery = searchQuery.trim();
   const showingPersonalItems = trimmedQuery.length === 0;
 
@@ -54,39 +60,71 @@ export function SearchPane({
     ? `No ${contentType}s found.`
     : `No ${contentType}s found. Try a different search term.`;
 
-  const fetchMyItems = useCallback(async () => {
-    setLoading(true);
-    try {
-      let results: TrackContainer<any>[] = [];
-      if (contentType === 'playlist') {
-        const savedTracksResponse = await sdk.currentUser.tracks.savedTracks(1, 0);
-        const likedSongs = new LikedSongsContainer(sdk, savedTracksResponse.total);
-        const userPlaylists = await sdk.currentUser.playlists.playlists();
-        const playlistContainers = userPlaylists.items
-          .filter((playlist): playlist is NonNullable<typeof playlist> => playlist != null)
-          .map(playlist => new PlaylistContainer(sdk, playlist));
-        const personalItems: TrackContainer<any>[] = [
-          likedSongs as unknown as TrackContainer<any>
-        ];
-        if (recentTracksContainer) {
-          personalItems.push(recentTracksContainer as unknown as TrackContainer<any>);
+  const fetchMyItems = useCallback(
+    async (reset: boolean) => {
+      const limit = personalPage.limit;
+      const offset = reset ? 0 : personalPage.offset + personalPage.limit;
+
+      reset ? setLoading(true) : setLoadingMore(true);
+
+      try {
+        let results: TrackContainer<any>[] = [];
+        let total = personalPage.total ?? null;
+
+        if (contentType === 'playlist') {
+          if (reset) {
+            const savedTracksResponse = await sdk.currentUser.tracks.savedTracks(1, 0);
+            const likedSongs = new LikedSongsContainer(sdk, savedTracksResponse.total);
+            results.push(likedSongs as unknown as TrackContainer<any>);
+            if (recentTracksContainer) {
+              results.push(recentTracksContainer as unknown as TrackContainer<any>);
+            }
+          }
+
+          const userPlaylists = await sdk.currentUser.playlists.playlists(limit as any, offset as any);
+          const playlistContainers = userPlaylists.items
+            .filter((playlist): playlist is NonNullable<typeof playlist> => playlist != null)
+            .map(playlist => new PlaylistContainer(sdk, playlist));
+
+          results = reset ? [...results, ...playlistContainers] : playlistContainers;
+          total = userPlaylists.total ?? total ?? null;
+          setItems(prev => (reset ? results : [...prev, ...results]));
+          setPersonalPage({
+            offset: userPlaylists.offset ?? offset,
+            limit: userPlaylists.limit ?? limit,
+            total
+          });
+          setPersonalHasMore(Boolean(userPlaylists.next));
+        } else {
+          const savedAlbums = await sdk.currentUser.albums.savedAlbums(limit as any, offset as any);
+          const albumContainers = savedAlbums.items.map(savedAlbum =>
+            new AlbumContainer(sdk, savedAlbum.album as any) as TrackContainer<any>
+          );
+          results = albumContainers;
+          total = savedAlbums.total ?? total ?? null;
+          setItems(prev => (reset ? results : [...prev, ...results]));
+          setPersonalPage({
+            offset: savedAlbums.offset ?? offset,
+            limit: savedAlbums.limit ?? limit,
+            total
+          });
+          setPersonalHasMore(Boolean(savedAlbums.next));
         }
-        results = [...personalItems, ...playlistContainers];
-      } else {
-        const savedAlbums = await sdk.currentUser.albums.savedAlbums();
-        results = savedAlbums.items.map(savedAlbum =>
-          new AlbumContainer(sdk, savedAlbum.album as any) as TrackContainer<any>
-        );
+
+        setSearchResults(null);
+      } catch (error) {
+        console.error('Error fetching personal items:', error);
+        if (reset) {
+          setItems([]);
+          setPersonalPage({ offset: 0, limit, total: null });
+          setPersonalHasMore(false);
+        }
+      } finally {
+        reset ? setLoading(false) : setLoadingMore(false);
       }
-      setItems(results);
-      setSearchResults(null);
-    } catch (error) {
-      console.error('Error fetching personal items:', error);
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [sdk, contentType, recentTracksContainer]);
+    },
+    [contentType, personalPage.limit, personalPage.offset, personalPage.total, recentTracksContainer, sdk]
+  );
 
   const performSearch = useCallback(
     async (append = false) => {
@@ -148,7 +186,7 @@ export function SearchPane({
 
   useEffect(() => {
     if (showingPersonalItems) {
-      fetchMyItems();
+      fetchMyItems(true);
     }
   }, [showingPersonalItems, fetchMyItems]);
 
@@ -160,6 +198,12 @@ export function SearchPane({
   };
 
   const loadMore = () => {
+    if (showingPersonalItems) {
+      if (personalHasMore && !loadingMore) {
+        void fetchMyItems(false);
+      }
+      return;
+    }
     if (searchResults?.next) {
       performSearch(true);
     }
@@ -170,13 +214,16 @@ export function SearchPane({
     [items, selectedIds]
   );
 
-  const hasMoreItems = Boolean(
-    !showingPersonalItems &&
-      searchResults &&
-      searchResults.next &&
-      searchResults.offset + searchResults.limit < searchResults.total
-  );
-  const remainingItems = searchResults
+  const hasMoreItems = showingPersonalItems
+    ? personalHasMore
+    : Boolean(
+        searchResults &&
+          searchResults.next &&
+          searchResults.offset + searchResults.limit < searchResults.total
+      );
+  const remainingItems = showingPersonalItems
+    ? Math.max(0, (personalPage.total ?? 0) - (personalPage.offset + personalPage.limit))
+    : searchResults
     ? Math.max(0, searchResults.total - (searchResults.offset + searchResults.limit))
     : 0;
 
@@ -209,18 +256,7 @@ export function SearchPane({
     />
   ));
 
-  if (!showingPersonalItems && hasMoreItems && !loading) {
-    itemTiles.push(
-      <ButtonTile
-        key="load-more"
-        name={loadingMore ? 'Loading…' : `Load More (${remainingItems} remaining)`}
-        onClick={loadMore}
-        disabled={loadingMore}
-      />
-    );
-  }
-
-  const hasResults = itemTiles.length > 0;
+  const loadMoreLabel = loadingMore ? 'Loading…' : `Load More (${remainingItems} remaining)`;
 
   const handleClearSearch = () => {
     if (!searchQuery) {
@@ -279,17 +315,19 @@ export function SearchPane({
         </form>
       </div>
 
-      {loading ? (
-        <LoadingAnimation label={`Loading ${contentType}s…`} />
-      ) : (
-        <div className="playlist-container">
-          {hasResults ? (
-            itemTiles
-          ) : (
-            <div className="no-results">{noResultsMessage}</div>
-          )}
-        </div>
-      )}
+      <PaginatedList
+        isLoading={loading}
+        items={itemTiles}
+        loadingMessage={<LoadingAnimation label={`Loading ${contentType}s…`} />}
+        emptyMessage={<div className="no-results">{noResultsMessage}</div>}
+        hasMore={hasMoreItems}
+        onLoadMore={loadMore}
+        loadMoreLabel={loadMoreLabel}
+        loadingMore={loadingMore}
+        className="search-results"
+        itemsWrapperElement="div"
+        itemsClassName="playlist-container"
+      />
     </div>
   );
 
