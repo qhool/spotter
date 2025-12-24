@@ -7,7 +7,8 @@ import { RemixWizardPage } from './pages/RemixWizardPage';
 import { RecentTracksPage } from './pages/RecentTracksPage';
 import { HamburgerMenu } from './components/navigation/HamburgerMenu';
 import { SyncController } from './data/SyncController';
-import { createRecentTracksSyncOperation, DEFAULT_RECENT_TRACKS_MAX_ITEMS, RecentTracksSyncValue, RECENT_TRACKS_SYNC_NAME } from './data/SyncFunctions';
+import { RecentTracksSyncValue } from './data/SyncFunctions';
+import { registerRecentTracksSync } from './data/registerSyncOperations';
 import type { SyncResult } from './data/SyncController';
 import './App.css';
 
@@ -40,30 +41,14 @@ function AppWithNavigation({ sdk }: { sdk: SpotifyApi }) {
   }, [syncController]);
 
   useEffect(() => {
-    const config = createRecentTracksSyncOperation({
-      name: RECENT_TRACKS_SYNC_NAME,
+    const unregister = registerRecentTracksSync({
+      controller: syncController,
       sdk,
-      maxItems: DEFAULT_RECENT_TRACKS_MAX_ITEMS,
-      onscreenIntervalMs: 2 * 60_000,
-      offscreenIntervalMs: 10 * 60_000,
-      runOnRegister: true,
-      onUpdate: result => {
-        setRecentTracksState(result);
-      },
-      onError: error => console.error('Recent tracks sync failed', error)
+      onUpdate: result => setRecentTracksState(result),
+      onReadyChange: ready => setRecentTracksSyncReady(ready)
     });
 
-    try {
-      syncController.registerOperation(config);
-      setRecentTracksSyncReady(true);
-    } catch (error) {
-      console.error('Failed to register recent tracks sync:', error);
-    }
-
-    return () => {
-      setRecentTracksSyncReady(false);
-      syncController.unregisterOperation(config.name);
-    };
+    return unregister;
   }, [sdk, syncController]);
 
   return (

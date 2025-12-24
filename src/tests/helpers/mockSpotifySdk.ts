@@ -1,4 +1,4 @@
-import { Track } from '@spotify/web-api-ts-sdk';
+import { PlayHistory, Track } from '@spotify/web-api-ts-sdk';
 import { vi } from 'vitest';
 
 type SearchHandler = (
@@ -18,8 +18,10 @@ export class MockSpotifySdk {
   private tracksAddedCount = 0;
   private failureMessage = 'Simulated API failure';
   private nextPlaylistId = 1;
+  private recentTracks: PlayHistory[] = [];
+  private recentLimit: number;
 
-  constructor(searchHandler?: SearchHandler) {
+  constructor(searchHandler?: SearchHandler, options?: { recentLimit?: number }) {
     this.search = vi.fn(
       searchHandler ??
         (() =>
@@ -27,6 +29,7 @@ export class MockSpotifySdk {
             tracks: { items: [] }
           }))
     );
+    this.recentLimit = options?.recentLimit ?? 100;
   }
 
   // Search API stub (spy-able)
@@ -87,6 +90,33 @@ export class MockSpotifySdk {
       }
     }
   };
+
+  player = {
+    getRecentlyPlayedTracks: async (limit: number = 50, _range?: { type: 'before'; timestamp: string }) => {
+      const safeLimit = Math.min(Math.max(limit, 1), this.recentLimit);
+      const items = this.recentTracks.slice(0, safeLimit);
+      const before = items.length < this.recentTracks.length ? items[items.length - 1]?.played_at ?? null : null;
+      return {
+        items,
+        next: null,
+        cursors: {
+          before
+        }
+      };
+    }
+  };
+
+  addRecentTrack(track: Track, playedAt: Date = new Date()): void {
+    const entry: PlayHistory = {
+      track,
+      played_at: playedAt.toISOString(),
+      context: undefined
+    };
+    this.recentTracks.unshift(entry);
+    if (this.recentTracks.length > this.recentLimit) {
+      this.recentTracks.length = this.recentLimit;
+    }
+  }
 
   setFailurePoints(trackCounts: number[], message: string = 'Simulated API failure'): void {
     this.failurePoints = [...trackCounts];
