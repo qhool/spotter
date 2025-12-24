@@ -141,12 +141,20 @@ export abstract class TrackContainer<TrackType = Track> {
     limit: number = -1,
     offset: number = 0
   ): Promise<Track[]> {
-    await this._fillCache(limit < 0 ? -1 : offset + limit);
+    const targetCount = limit < 0 ? -1 : offset + limit;
+    await this._fillCache(targetCount);
+
+    const totalAvailable = this._fetchedRawTracks.length;
+    const start = Math.min(Math.max(offset, 0), totalAvailable);
+    const end = limit < 0 ? totalAvailable : Math.min(offset + limit, totalAvailable);
+
+    if (start >= end) {
+      return [];
+    }
+
     const tracks: Track[] = [];
-    let end = this._fetchedRawTracks.length;
-    end = Math.min(limit < 0 ? end : limit, end);
-    console.log(`Getting standardized tracks from ${offset} to ${end}`);
-    for (let i = offset; i < end; i++) {
+    console.log(`Getting standardized tracks from ${start} to ${end}`);
+    for (let i = start; i < end; i++) {
       const track = await this._getStandardizedTrack(i);
       tracks.push(track);
     }
@@ -155,10 +163,17 @@ export abstract class TrackContainer<TrackType = Track> {
 
   async getTracks(limit: number = 50, offset: number = 0): Promise<TrackResponse> {
     const resolvedTracks = await this._getStandardizedTracks(limit, offset);
+    const total = this.totalCount ?? this._fetchedRawTracks.length;
+    const next =
+      limit < 0
+        ? null
+        : offset + resolvedTracks.length < total
+        ? offset + resolvedTracks.length
+        : null;
     return {
       items: resolvedTracks,
-      total: resolvedTracks.length,
-      next: resolvedTracks.length === limit ? offset + limit : null
+      total,
+      next
     };
   }
 

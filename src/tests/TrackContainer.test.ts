@@ -164,4 +164,70 @@ describe('TrackContainer Local Track Integration', () => {
     expect(result[1].id).toBe('resolved2');
     expect(mockSdk.search).toHaveBeenCalledTimes(2);
   });
+
+  it('paginates getTracks correctly when offset is non-zero', async () => {
+    const trackA = createMockTrack('trackA', 'Track A', false);
+    const trackB = createMockTrack('trackB', 'Track B', false);
+    const trackC = createMockTrack('trackC', 'Track C', false);
+
+    const mockSdk = { search: vi.fn() };
+    const container = new MockTrackContainer(mockSdk, [trackA, trackB, trackC]);
+
+    const result = await container.getTracks(1, 1);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].id).toBe('trackB');
+    expect(result.total).toBe(3);
+    expect(result.next).toBe(2);
+  });
+
+  it('returns tail slice when offset is near the end', async () => {
+    const tracks = [
+      createMockTrack('trackA', 'Track A', false),
+      createMockTrack('trackB', 'Track B', false),
+      createMockTrack('trackC', 'Track C', false)
+    ];
+
+    const container = new MockTrackContainer({ search: vi.fn() }, tracks);
+    const result = await container.getTracks(5, 2);
+
+    expect(result.items.map(t => t.id)).toEqual(['trackC']);
+    expect(result.total).toBe(3);
+    expect(result.next).toBe(null);
+  });
+
+  it('paginates across multiple calls while preserving cache and totals', async () => {
+    const tracks = [
+      createMockTrack('trackA', 'Track A', false),
+      createMockTrack('trackB', 'Track B', false),
+      createMockTrack('trackC', 'Track C', false),
+      createMockTrack('trackD', 'Track D', false)
+    ];
+
+    const container = new MockTrackContainer({ search: vi.fn() }, tracks);
+
+    const firstPage = await container.getTracks(2, 0);
+    expect(firstPage.items.map(t => t.id)).toEqual(['trackA', 'trackB']);
+    expect(firstPage.total).toBe(4);
+    expect(firstPage.next).toBe(2);
+
+    const secondPage = await container.getTracks(2, 2);
+    expect(secondPage.items.map(t => t.id)).toEqual(['trackC', 'trackD']);
+    expect(secondPage.total).toBe(4);
+    expect(secondPage.next).toBe(null);
+  });
+
+  it('handles limit -1 via getTracks', async () => {
+    const tracks = [
+      createMockTrack('trackA', 'Track A', false),
+      createMockTrack('trackB', 'Track B', false)
+    ];
+
+    const container = new MockTrackContainer({ search: vi.fn() }, tracks);
+    const result = await container.getTracks(-1, 0);
+
+    expect(result.items.map(t => t.id)).toEqual(['trackA', 'trackB']);
+    expect(result.total).toBe(2);
+    expect(result.next).toBe(null);
+  });
 });
