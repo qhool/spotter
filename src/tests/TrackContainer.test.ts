@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Track } from '@spotify/web-api-ts-sdk';
 import { TrackContainer } from '../data/TrackContainer';
+import { MockSpotifySdk } from './helpers/mockSpotifySdk';
 
 // Mock TrackContainer for testing local track resolution
 class MockTrackContainer extends TrackContainer<Track> {
@@ -64,13 +65,12 @@ describe('TrackContainer Local Track Integration', () => {
     const resolvedTrack = createMockTrack('resolved1', 'Local Song', false); // The resolved version
     
     // Mock SDK with search that returns the resolved track
-    const mockSdk = {
-      search: vi.fn().mockResolvedValue({
-        tracks: {
-          items: [resolvedTrack]
-        }
-      })
-    };
+    const mockSdk = new MockSpotifySdk();
+    mockSdk.search.mockResolvedValue({
+      tracks: {
+        items: [resolvedTrack]
+      }
+    });
     
     const container = new MockTrackContainer(mockSdk, [localTrack, regularTrack]);
     const result = await container.getTracks(10, 0);
@@ -95,13 +95,13 @@ describe('TrackContainer Local Track Integration', () => {
     const localTrack = createMockTrack('local1', 'Unknown Song', true, 'spotify:local:Unknown+Artist:Unknown+Album:Unknown+Song:180');
     
     // Mock SDK with search that returns no results
-    const mockSdk = {
-      search: vi.fn().mockResolvedValue({
+    const mockSdk = new MockSpotifySdk(() =>
+      Promise.resolve({
         tracks: {
           items: []
         }
       })
-    };
+    );
     
     const container = new MockTrackContainer(mockSdk, [localTrack]);
     const result = await container.getTracks(10, 0);
@@ -117,13 +117,12 @@ describe('TrackContainer Local Track Integration', () => {
     const resolvedTrack = createMockTrack('resolved1', 'Local Song', false);
     
     console.log("Starting test for caching resolved tracks");
-    const mockSdk = {
-      search: vi.fn().mockResolvedValue({
-        tracks: {
-          items: [resolvedTrack]
-        }
-      })
-    };
+    const mockSdk = new MockSpotifySdk();
+    mockSdk.search.mockResolvedValue({
+      tracks: {
+        items: [resolvedTrack]
+      }
+    });
 
     expect(mockSdk.search).toHaveBeenCalledTimes(0);
     
@@ -146,15 +145,14 @@ describe('TrackContainer Local Track Integration', () => {
     const resolvedTrack1 = createMockTrack('resolved1', 'Local Song 1', false);
     const resolvedTrack2 = createMockTrack('resolved2', 'Local Song 2', false);
     
-    const mockSdk = {
-      search: vi.fn()
-        .mockResolvedValueOnce({
-          tracks: { items: [resolvedTrack1] }
-        })
-        .mockResolvedValueOnce({
-          tracks: { items: [resolvedTrack2] }
-        })
-    };
+    const mockSdk = new MockSpotifySdk();
+    mockSdk.search
+      .mockResolvedValueOnce({
+        tracks: { items: [resolvedTrack1] }
+      })
+      .mockResolvedValueOnce({
+        tracks: { items: [resolvedTrack2] }
+      });
     
     const container = new MockTrackContainer(mockSdk, [localTrack1, localTrack2]);
     const result = await container.getAllTracks();
@@ -170,7 +168,7 @@ describe('TrackContainer Local Track Integration', () => {
     const trackB = createMockTrack('trackB', 'Track B', false);
     const trackC = createMockTrack('trackC', 'Track C', false);
 
-    const mockSdk = { search: vi.fn() };
+    const mockSdk = new MockSpotifySdk();
     const container = new MockTrackContainer(mockSdk, [trackA, trackB, trackC]);
 
     const result = await container.getTracks(1, 1);
@@ -188,7 +186,7 @@ describe('TrackContainer Local Track Integration', () => {
       createMockTrack('trackC', 'Track C', false)
     ];
 
-    const container = new MockTrackContainer({ search: vi.fn() }, tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
     const result = await container.getTracks(5, 2);
 
     expect(result.items.map(t => t.id)).toEqual(['trackC']);
@@ -204,7 +202,7 @@ describe('TrackContainer Local Track Integration', () => {
       createMockTrack('trackD', 'Track D', false)
     ];
 
-    const container = new MockTrackContainer({ search: vi.fn() }, tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
 
     const firstPage = await container.getTracks(2, 0);
     expect(firstPage.items.map(t => t.id)).toEqual(['trackA', 'trackB']);
@@ -223,7 +221,7 @@ describe('TrackContainer Local Track Integration', () => {
       createMockTrack('trackB', 'Track B', false)
     ];
 
-    const container = new MockTrackContainer({ search: vi.fn() }, tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
     const result = await container.getTracks(-1, 0);
 
     expect(result.items.map(t => t.id)).toEqual(['trackA', 'trackB']);

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Track } from '@spotify/web-api-ts-sdk';
 import { JSONExportTarget, InMemoryExportTarget, PlaylistExportTarget } from '../data/Exporters';
 import { ExportController } from '../data/ExportController';
+import { MockSpotifySdk } from './helpers/mockSpotifySdk';
 
 // Mock track data for testing
 const createMockTrack = (id: string, name: string): Track => ({
@@ -46,7 +47,7 @@ const mockTracks: Track[] = [
   {
     name: 'PlaylistExportTarget (existing playlist)',
     createTarget: () => {
-      const mockSdk = new MockSpotifySDK();
+      const mockSdk = new MockSpotifySdk();
       const target = new PlaylistExportTarget(mockSdk as any, { id: 'existing123' }); // Existing playlist ID
       (target as any).mockSdk = mockSdk;
       return target;
@@ -57,7 +58,7 @@ const mockTracks: Track[] = [
   {
     name: 'PlaylistExportTarget (new playlist)',
     createTarget: () => {
-      const mockSdk = new MockSpotifySDK();
+      const mockSdk = new MockSpotifySdk();
       const target = new PlaylistExportTarget(mockSdk as any, { name: 'My Test Playlist', description: 'Created by test' }); // New playlist
       (target as any).mockSdk = mockSdk;
       return target;
@@ -155,10 +156,10 @@ describe(`ExportController with ${name}`, () => {
 }); // End of forEach loop
 
 describe('PlaylistExportTarget playlist creation', () => {
-  let mockSdk: MockSpotifySDK;
+  let mockSdk: MockSpotifySdk;
 
   beforeEach(() => {
-    mockSdk = new MockSpotifySDK();
+    mockSdk = new MockSpotifySdk();
   });
 
   it('should create a new playlist when given a name', async () => {
@@ -204,7 +205,7 @@ describe('PlaylistExportTarget playlist creation', () => {
   });
 
   it('should respect retry limits and stop retrying after max attempts', async () => {
-    const mockSdk = new MockSpotifySDK();
+    const mockSdk = new MockSpotifySdk();
     // Set failure points that will always fail
     mockSdk.setFailurePoints([0, 0, 0, 0, 0], 'Persistent failure');
     
@@ -305,96 +306,5 @@ class TestExportTarget extends InMemoryExportTarget {
 
   getInitializationDescription(): string {
     return 'Initializing test';
-  }
-}
-
-// Mock Spotify SDK for testing PlaylistExportTarget
-class MockSpotifySDK {
-  private playlistTracks: Track[] = [];
-  private failurePoints: number[] = [];
-  private tracksAddedCount = 0;
-  private failureMessage = 'Simulated API failure';
-  private nextPlaylistId = 1;
-
-  currentUser = {
-    profile: async () => ({ id: 'test-user-id' })
-  };
-
-  playlists = {
-    createPlaylist: async (_userId: string, options: { name: string; description?: string; public?: boolean }) => {
-      const playlistId = `playlist-${this.nextPlaylistId++}`;
-      return {
-        id: playlistId,
-        name: options.name,
-        description: options.description || '',
-        public: options.public || false
-      };
-    },
-
-    getPlaylistItems: async (_playlistId: string) => {
-      return {
-        items: this.playlistTracks.map(track => ({ track })),
-        total: this.playlistTracks.length
-      };
-    },
-
-    addItemsToPlaylist: async (_playlistId: string, trackUris: string[]) => {
-      // Check for failure before adding
-      if (this.failurePoints.length > 0 && this.tracksAddedCount >= this.failurePoints[0]) {
-        this.failurePoints.shift();
-        throw new Error(this.failureMessage);
-      }
-
-      // Add tracks to mock playlist
-      const newTracks = trackUris.map(uri => {
-        const trackId = uri.replace('spotify:track:', '');
-        return createMockTrack(trackId, `Track ${trackId}`);
-      });
-
-      this.playlistTracks.push(...newTracks);
-      this.tracksAddedCount += newTracks.length;
-    },
-
-    updatePlaylistItems: async (_playlistId: string, options: { range_start: number; range_length: number; uris: string[]; insert_before?: number }) => {
-      // If uris is empty and insert_before is omitted, this is a removal operation
-      if (options.uris.length === 0 && options.insert_before === undefined) {
-        // Remove tracks from range_start to range_start + range_length
-        this.playlistTracks.splice(options.range_start, options.range_length);
-      } else {
-        // This would be an insert/replace operation (not implemented for our tests)
-        throw new Error('Mock updatePlaylistItems only supports removal operations');
-      }
-    }
-  };
-
-  setFailurePoints(trackCounts: number[], message: string = 'Simulated API failure'): void {
-    this.failurePoints = [...trackCounts];
-    this.failureMessage = message;
-  }
-
-  reset(): void {
-    this.playlistTracks = [];
-    this.failurePoints = [];
-    this.tracksAddedCount = 0;
-    this.failureMessage = 'Simulated API failure';
-  }
-
-  getTracksAddedCount(): number {
-    return this.tracksAddedCount;
-  }
-
-  getCurrentTrackIDs(): string[] {
-    return this.playlistTracks.map(track => track.id);
-  }
-
-  // Test helper methods
-  addExistingTrack(track: Track): void {
-    this.playlistTracks.push(track);
-    this.tracksAddedCount++;
-  }
-
-  setExistingTracks(tracks: Track[]): void {
-    this.playlistTracks = [...tracks];
-    this.tracksAddedCount = tracks.length;
   }
 }
