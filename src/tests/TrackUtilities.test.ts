@@ -34,7 +34,7 @@ describe('TrackUtilities', () => {
       const nonLocalTrack = createMockLocalTrack('spotify:track:4iV5W9uYEdYUVa79Axb7Rh', 'Regular Track');
       nonLocalTrack.is_local = false;
       
-      const result = await resolveLocalTrack(mockSdk, nonLocalTrack);
+      const result = await resolveLocalTrack(mockSdk as any, nonLocalTrack);
       expect(result).toBeNull();
     });
 
@@ -42,7 +42,7 @@ describe('TrackUtilities', () => {
       const mockSdk = new MockSpotifySdk();
       
       const localTrack = createMockLocalTrack('spotify:local:invalid');
-      const result = await resolveLocalTrack(mockSdk, localTrack);
+      const result = await resolveLocalTrack(mockSdk as any, localTrack);
       expect(result).toBeNull();
     });
 
@@ -71,7 +71,7 @@ describe('TrackUtilities', () => {
       });
       
       const localTrack = createMockLocalTrack('spotify:local:Josh+Ritter:The+Beast+In+Its+Tracks:Joy+To+You+Baby:273', 'Joy To You Baby');
-      const result = await resolveLocalTrack(mockSdk, localTrack);
+      const result = await resolveLocalTrack(mockSdk as any, localTrack);
       
       expect(result).toBeTruthy();
       expect(result!.id).toBe('test123');
@@ -102,7 +102,7 @@ describe('TrackUtilities', () => {
       });
       
       const localTrack = createMockLocalTrack('spotify:local:Artist%20Name:Album%20Title:Track%20With%20Spaces:180', 'Track With Spaces');
-      const result = await resolveLocalTrack(mockSdk, localTrack);
+      const result = await resolveLocalTrack(mockSdk as any, localTrack);
       
       expect(result).toBeTruthy();
       expect(result!.id).toBe('test456');
@@ -129,7 +129,7 @@ describe('TrackUtilities', () => {
       );
       
       const localTrack = createMockLocalTrack('spotify:local:Josh+Ritter:The+Beast+In+Its+Tracks:Joy+To+You+Baby:273', 'Joy To You Baby');
-      const result = await resolveLocalTrack(mockSdk, localTrack);
+      const result = await resolveLocalTrack(mockSdk as any, localTrack);
       
       expect(result).toBeNull();
     });
@@ -164,7 +164,7 @@ describe('TrackUtilities', () => {
       );
       
       const localTrack = createMockLocalTrack('spotify:local:Josh+Ritter:The+Beast+In+Its+Tracks:Joy+To+You+Baby:273', 'Joy To You Baby');
-      const result = await resolveLocalTrack(mockSdk, localTrack);
+      const result = await resolveLocalTrack(mockSdk as any, localTrack);
       
       expect(result?.id).toBe('exact123'); // Should prefer exact match
       expect(result?.original_local).toEqual(localTrack);

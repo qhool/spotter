@@ -28,6 +28,8 @@ const createTrack = (id: string, name = id, overrides: Partial<Track> = {}): Tra
   uri: `spotify:track:${id}`,
   available_markets: [],
   is_playable: true,
+  episode: false,
+  track: true,
   ...overrides
 });
 

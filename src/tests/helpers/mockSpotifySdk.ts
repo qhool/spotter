@@ -148,7 +148,7 @@ export class MockSpotifySdk {
     const entry: PlayHistory = {
       track,
       played_at: playedAt.toISOString(),
-      context: undefined
+      context: {} as any
     };
     this.recentTracks.unshift(entry);
     if (this.recentTracks.length > this.recentLimit) {

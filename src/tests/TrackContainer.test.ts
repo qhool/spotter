@@ -156,7 +156,7 @@ describe('TrackContainer Local Track Integration', () => {
       .mockRejectedValueOnce(new Error('boom'))
       .mockResolvedValueOnce(null);
 
-    const container = new MockTrackContainer(new MockSpotifySdk(), [localTrack]);
+    const container = new MockTrackContainer(new MockSpotifySdk() as any, [localTrack]);
 
     const first = await container.getTracks(1, 0);
     expect(first.items[0].id).toBe('local1');
@@ -214,7 +214,7 @@ describe('TrackContainer Local Track Integration', () => {
       createMockTrack('trackC', 'Track C', false)
     ];
 
-    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk() as any, tracks);
     const result = await container.getTracks(5, 2);
 
     expect(result.items.map(t => t.id)).toEqual(['trackC']);
@@ -230,7 +230,7 @@ describe('TrackContainer Local Track Integration', () => {
       createMockTrack('trackD', 'Track D', false)
     ];
 
-    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk() as any, tracks);
 
     const firstPage = await container.getTracks(2, 0);
     expect(firstPage.items.map(t => t.id)).toEqual(['trackA', 'trackB']);
@@ -249,7 +249,7 @@ describe('TrackContainer Local Track Integration', () => {
       createMockTrack('trackB', 'Track B', false)
     ];
 
-    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk() as any, tracks);
     const result = await container.getTracks(-1, 0);
 
     expect(result.items.map(t => t.id)).toEqual(['trackA', 'trackB']);
@@ -259,7 +259,7 @@ describe('TrackContainer Local Track Integration', () => {
 
   it('returns empty slice when offset exceeds fetched tracks', async () => {
     const tracks = [createMockTrack('trackA', 'Track A', false)];
-    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
+    const container = new MockTrackContainer(new MockSpotifySdk() as any, tracks);
 
     const result = await container.getTracks(2, 5);
     expect(result.items).toEqual([]);
@@ -282,13 +282,15 @@ describe('TrackContainer pagination and caching internals', () => {
       id = 'stub';
       name = 'stub';
       type: 'playlist' = 'playlist';
+      description = '';
+      coverImage = { url: '' };
       protected _standardizeTrack(raw: Track) { return raw; }
       protected async _getTracks(limit?: number, offset?: number) {
         return getTracksSpy(limit, offset);
       }
     }
 
-    const container = new StubContainer(new MockSpotifySdk());
+    const container = new StubContainer(new MockSpotifySdk() as any);
     const all = await container.getAllTracks();
     expect(all.map(t => t.id)).toEqual(['t1', 't2']);
     expect(getTracksSpy).toHaveBeenCalledTimes(2);
@@ -304,8 +306,8 @@ describe('PlaylistContainer', () => {
   } as any;
 
   it('standardizes only track items and rejects episodes', () => {
-    const sdk = new MockSpotifySdk();
-    const container = new PlaylistContainer(sdk as any, basePlaylist);
+    const sdk = new MockSpotifySdk() as any;
+    const container = new PlaylistContainer(sdk, basePlaylist);
     const trackItem = { track: { id: 't1', type: 'track', is_local: false } } as any;
     expect((container as any)._standardizeTrack(trackItem)).toEqual(trackItem.track);
     const episodeItem = { track: { id: 'e1', type: 'episode' } } as any;
@@ -313,7 +315,7 @@ describe('PlaylistContainer', () => {
   });
 
   it('clamps limits, paginates with next offset, and respects offset', async () => {
-    const sdk = new MockSpotifySdk();
+    const sdk = new MockSpotifySdk() as any;
     sdk.setExistingTracks([
       { id: 't1', type: 'track', is_local: false } as Track,
       { id: 't2', type: 'track', is_local: false } as Track,
@@ -361,7 +363,7 @@ describe('AlbumContainer', () => {
     }) as any;
 
   it('standardizes simplified track with album info and defaults', () => {
-    const sdk = new MockSpotifySdk();
+    const sdk = new MockSpotifySdk() as any;
     const container = new AlbumContainer(sdk as any, album);
     const standardized = (container as any)._standardizeTrack(simplifiedTrack('t1'));
     expect(standardized.album).toEqual(album);
@@ -371,7 +373,7 @@ describe('AlbumContainer', () => {
   });
 
   it('clamps limits and paginates album tracks', async () => {
-    const sdk = new MockSpotifySdk();
+    const sdk = new MockSpotifySdk() as any;
     sdk.setAlbumTracks('alb1', [simplifiedTrack('t1'), simplifiedTrack('t2')]);
     const container = new AlbumContainer(sdk as any, album);
 
@@ -425,7 +427,9 @@ describe('RemixContainer', () => {
     id = 'simple';
     name = 'simple';
     type: 'playlist' = 'playlist';
-    constructor(private provided: Track[]) { super(new MockSpotifySdk()); }
+    description = '';
+    coverImage = { url: '' };
+    constructor(private provided: Track[]) { super(new MockSpotifySdk() as any); }
     protected _standardizeTrack(raw: Track) { return raw; }
     protected async _getTracks(): Promise<any> { throw new Error('unused'); }
     async getAllTracks() { return this.provided; }
@@ -434,7 +438,7 @@ describe('RemixContainer', () => {
   it('paginates remixed tracks without re-running remix function', async () => {
     const inputs = new SimpleContainer([baseTrack('a'), baseTrack('b')]);
     const remixFn = vi.fn().mockReturnValue([baseTrack('a'), baseTrack('b'), baseTrack('c')]);
-    const remix = new RemixContainer(new MockSpotifySdk(), [[inputs, {}]], remixFn);
+    const remix = new RemixContainer(new MockSpotifySdk() as any, [[inputs, {}]], remixFn);
 
     const first = await remix.getTracks(2, 0);
     expect(first.items.map(t => t.id)).toEqual(['a', 'b']);
@@ -453,7 +457,7 @@ describe('RemixContainer', () => {
     );
 
     const remixFn = vi.fn().mockReturnValue([baseTrack('x')]);
-    const remix = new RemixContainer(new MockSpotifySdk(), [[slowContainer, {}]], remixFn);
+    const remix = new RemixContainer(new MockSpotifySdk() as any, [[slowContainer, {}]], remixFn);
 
     const p1 = remix.getAllTracks(); // kicks off load
     const p2 = remix.getAllTracks(); // should wait on first
@@ -468,7 +472,7 @@ describe('RemixContainer', () => {
   });
 
   it('standardizes remixed track identity and _getTracks throws', async () => {
-    const remix = new RemixContainer(new MockSpotifySdk(), [], (inputs: any) => inputs as any);
+    const remix = new RemixContainer(new MockSpotifySdk() as any, [], (inputs: any) => inputs as any);
     expect((remix as any)._standardizeTrack(baseTrack('z'))).toEqual(baseTrack('z'));
     await expect((remix as any)._getTracks()).rejects.toThrow(/not implemented/);
   });
