@@ -22,6 +22,8 @@ export class MockSpotifySdk {
   private recentLimit: number;
   private albumTracks: Record<string, Track[]> = {};
   private likedTracks: SavedTrack[] = [];
+  private queueItems: Track[] = [];
+  private availableDevices: { id: string; name: string }[] = [];
 
   constructor(searchHandler?: SearchHandler, options?: { recentLimit?: number }) {
     this.search = vi.fn(
@@ -117,6 +119,9 @@ export class MockSpotifySdk {
   };
 
   player = {
+    getAvailableDevices: async () => ({
+      devices: this.availableDevices.map(d => ({ id: d.id, name: d.name }))
+    }),
     getRecentlyPlayedTracks: async (limit: number = 50, _range?: { type: 'before'; timestamp: string }) => {
       const safeLimit = Math.min(Math.max(limit, 1), this.recentLimit);
       const items = this.recentTracks.slice(0, safeLimit);
@@ -128,7 +133,15 @@ export class MockSpotifySdk {
           before
         }
       };
-    }
+    },
+    addItemToPlaybackQueue: vi.fn(async (uri: string, _deviceId?: string) => {
+      const id = uri.replace('spotify:track:', '');
+      this.queueItems.push({ id, type: 'track', uri, is_local: false } as Track);
+    }),
+    getUsersQueue: vi.fn(async () => ({
+      currently_playing: this.queueItems[0] ?? null,
+      queue: this.queueItems.slice(1)
+    }))
   };
 
   addRecentTrack(track: Track, playedAt: Date = new Date()): void {
@@ -151,6 +164,14 @@ export class MockSpotifySdk {
     this.likedTracks = [...tracks];
   }
 
+  setQueue(items: Track[]): void {
+    this.queueItems = [...items];
+  }
+
+  setAvailableDevices(devices: { id: string; name: string }[]): void {
+    this.availableDevices = [...devices];
+  }
+
   setFailurePoints(trackCounts: number[], message: string = 'Simulated API failure'): void {
     this.failurePoints = [...trackCounts];
     this.failureMessage = message;
@@ -162,6 +183,8 @@ export class MockSpotifySdk {
     this.tracksAddedCount = 0;
     this.failureMessage = 'Simulated API failure';
     this.likedTracks = [];
+    this.queueItems = [];
+    this.availableDevices = [];
     if (this.search.mockReset) {
       this.search.mockReset();
     }
