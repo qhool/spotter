@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SyncController, SyncResult } from '../data/SyncController';
-import { registerRecentTracksSync } from '../data/registerSyncOperations';
-import { RecentTracksSyncValue } from '../data/SyncFunctions';
-import { MockSpotifySdk } from './helpers/mockSpotifySdk';
+import { SyncController, SyncResult } from '../../data/SyncController';
+import { registerRecentTracksSync } from '../../data/registerSyncOperations';
+import { RecentTracksSyncValue } from '../../data/SyncFunctions';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 const createTrack = (id: string) => ({
   id,

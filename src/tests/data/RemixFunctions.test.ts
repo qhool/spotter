@@ -7,7 +7,7 @@ import {
   getRemixFunction,
   RemixInput,
   RemixOptions
-} from '../data/RemixFunctions';
+} from '../../data/RemixFunctions';
 
 const createTrack = (id: string, name = id, overrides: Partial<Track> = {}): Track => ({
   id,
@@ -48,7 +48,7 @@ describe('RemixFunctions', () => {
 
       const result = getIncludedTracks(inputs);
 
-      expect(result.map(track => track.id)).toEqual(['a1', 'a2', 'b1']);
+      expect(result.map((track: Track) => track.id)).toEqual(['a1', 'a2', 'b1']);
     });
 
     it('removes overlapping tracks that appear in excluded inputs', () => {
@@ -59,7 +59,7 @@ describe('RemixFunctions', () => {
         [[clone], { excludeFromRemix: true }]
       ];
       const result = getIncludedTracks(inputs);
-      expect(result.map(track => track.id)).toEqual(['unique']);
+      expect(result.map((track: Track) => track.id)).toEqual(['unique']);
     });
 
     it('subtracts tracks from large collections and multiple exclude lists (programmatic)', () => {
@@ -94,7 +94,7 @@ describe('RemixFunctions', () => {
         const expected = includedIds.filter(id => !excludedIds.has(id));
 
         const result = getIncludedTracks(inputs);
-        expect(result.map(track => track.id)).toEqual(expected);
+        expect(result.map((track: Track) => track.id)).toEqual(expected);
       }
     });
 
@@ -182,8 +182,7 @@ describe('RemixFunctions', () => {
   describe('getRemixFunction', () => {
     it('returns shuffle function by default and for shuffle method', () => {
       expect(getRemixFunction('shuffle')).toBe(shuffleRemix);
-      // @ts-expect-error intentional invalid method to exercise default
-      expect(getRemixFunction('unknown')).toBe(shuffleRemix);
+      expect(getRemixFunction('unknown' as any)).toBe(shuffleRemix);
     });
 
     it('returns concatenate function for concatenate method', () => {

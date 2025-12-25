@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { RecentTracksContainer } from '../data/TrackContainer';
-import { MockSpotifySdk } from './helpers/mockSpotifySdk';
+import { RecentTracksContainer } from '../../data/TrackContainer';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 const createTrack = (id: string) => ({
   id,
@@ -42,7 +42,7 @@ describe('RecentTracksContainer', () => {
     const container = new RecentTracksContainer(sdk as any, 3);
     const tracks = await container.getAllRawTracks();
 
-    expect(tracks.map(t => t.track.id)).toEqual(['t4', 't3', 't2']);
+    expect(tracks.map((t: any) => t.track.id)).toEqual(['t4', 't3', 't2']);
     expect(container.getLastUpdated()).not.toBeNull();
   });
 
@@ -55,11 +55,11 @@ describe('RecentTracksContainer', () => {
     const container = new RecentTracksContainer(sdk as any, 5);
 
     const firstPage = await container.getRawTracks(2, 0);
-    expect(firstPage.items.map(t => t.track.id)).toEqual(['t3', 't2']);
+    expect(firstPage.items.map((t: any) => t.track.id)).toEqual(['t3', 't2']);
     expect(firstPage.next).toBe(2);
 
     const secondPage = await container.getRawTracks(2, firstPage.next as number);
-    expect(secondPage.items.map(t => t.track.id)).toEqual(['t1']);
+    expect(secondPage.items.map((t: any) => t.track.id)).toEqual(['t1']);
     expect(secondPage.next).toBeNull();
   });
 });

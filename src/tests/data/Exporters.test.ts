@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Track } from '@spotify/web-api-ts-sdk';
-import { JSONExportTarget, PlaylistExportTarget, QueueExportTarget } from '../data/Exporters';
-import { MockSpotifySdk } from './helpers/mockSpotifySdk';
+import { JSONExportTarget, PlaylistExportTarget, QueueExportTarget } from '../../data/Exporters';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 const track = (id: string): Track => ({ id, uri: `spotify:track:${id}`, type: 'track', is_local: false } as Track);
 

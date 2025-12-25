@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SyncController } from '../data/SyncController';
+import { SyncController } from '../../data/SyncController';
 
 describe('SyncController', () => {
   beforeEach(() => {

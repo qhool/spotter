@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveLocalTrack } from '../data/TrackUtilities';
+import { resolveLocalTrack } from '../../data/TrackUtilities';
 import { Track } from '@spotify/web-api-ts-sdk';
-import { MockSpotifySdk } from './helpers/mockSpotifySdk';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 describe('TrackUtilities', () => {
   describe('resolveLocalTrack', () => {

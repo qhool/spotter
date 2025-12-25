@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Track, PlayHistory } from '@spotify/web-api-ts-sdk';
-import { TrackContainer, RemixContainer, RecentTracksContainer, PlaylistContainer, AlbumContainer, LikedSongsContainer } from '../data/TrackContainer';
-import { MockSpotifySdk } from './helpers/mockSpotifySdk';
-import * as TrackUtilities from '../data/TrackUtilities';
+import { TrackContainer, RemixContainer, RecentTracksContainer, PlaylistContainer, AlbumContainer, LikedSongsContainer } from '../../data/TrackContainer';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
+import * as TrackUtilities from '../../data/TrackUtilities';
 
 // Mock TrackContainer for testing local track resolution
 class MockTrackContainer extends TrackContainer<Track> {

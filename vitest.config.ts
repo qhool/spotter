@@ -9,18 +9,15 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html', 'lcov'],
       include: [
+        'src/components/**',
         'src/data/**',
         'src/hooks/**',
+        'src/pages/**',
         'src/utils/**',
         'src/tests/helpers/**'
       ],
       exclude: [
-        'src/components/**',
-        'src/pages/**',
-        'src/App.tsx',
-        'src/main.tsx',
-        'src/**/*.css',
-        'src/tests/**'
+        'src/**/*.css'
       ]
     }
   },

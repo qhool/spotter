@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Track } from '@spotify/web-api-ts-sdk';
-import { JSONExportTarget, InMemoryExportTarget, PlaylistExportTarget } from '../data/Exporters';
-import { ExportController } from '../data/ExportController';
-import { MockSpotifySdk } from './helpers/mockSpotifySdk';
+import { JSONExportTarget, InMemoryExportTarget, PlaylistExportTarget } from '../../data/Exporters';
+import { ExportController } from '../../data/ExportController';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 // Mock track data for testing
 const createMockTrack = (id: string, name: string): Track => ({

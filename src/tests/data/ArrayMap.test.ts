@@ -4,7 +4,7 @@ import {
   ArrayMapItem,
   ArrayMapVersionState,
   useArrayMap
-} from '../data/ArrayMap';
+} from '../../data/ArrayMap';
 import { createElement, createRef, forwardRef, useImperativeHandle } from 'react';
 import { act } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
@@ -48,11 +48,11 @@ describe('ArrayMap', () => {
     expect(set.toArray()).toEqual([first, second, third]);
     expect([...set]).toEqual([first, second, third]);
 
-    const labels = set.map(item => item.label);
+    const labels = set.map((item: MockItem) => item.label);
     expect(labels).toEqual(['Alpha', 'Beta', 'Gamma']);
 
     const iterated: string[] = [];
-    set.forEach((item, index) => {
+    set.forEach((item: MockItem, index: number) => {
       iterated.push(`${index}:${item.label}`);
     });
     expect(iterated).toEqual(['0:Alpha', '1:Beta', '2:Gamma']);

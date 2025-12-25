@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { resolveAssetUrl, isLocalAssetUrl } from '../utils/assetUtils';
-import { responsiveSizingDump } from '../utils/responsiveSizingDump';
+import { resolveAssetUrl, isLocalAssetUrl } from '../../utils/assetUtils';
+import { responsiveSizingDump } from '../../utils/responsiveSizingDump';
 
 const originalEnv = { ...import.meta.env };
 
