@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { Track } from '@spotify/web-api-ts-sdk';
-import { TrackContainer } from '../data/TrackContainer';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Track, PlayHistory } from '@spotify/web-api-ts-sdk';
+import { TrackContainer, RemixContainer, RecentTracksContainer, PlaylistContainer, AlbumContainer, LikedSongsContainer } from '../data/TrackContainer';
 import { MockSpotifySdk } from './helpers/mockSpotifySdk';
+import * as TrackUtilities from '../data/TrackUtilities';
 
 // Mock TrackContainer for testing local track resolution
 class MockTrackContainer extends TrackContainer<Track> {
@@ -36,6 +37,15 @@ class MockTrackContainer extends TrackContainer<Track> {
 }
 
 describe('TrackContainer Local Track Integration', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   const createMockTrack = (id: string, name: string, isLocal: boolean, uri?: string): Track => ({
     id,
     name,
@@ -139,6 +149,24 @@ describe('TrackContainer Local Track Integration', () => {
     expect(mockSdk.search).toHaveBeenCalledTimes(1); // Should not be called again
   });
 
+  it('falls back to raw track when local resolution rejects or returns null', async () => {
+    const localTrack = createMockTrack('local1', 'Local Song', true, 'spotify:local:Test+Artist:Test+Album:Local+Song:180');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const resolveSpy = vi.spyOn(TrackUtilities, 'resolveLocalTrack')
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(null);
+
+    const container = new MockTrackContainer(new MockSpotifySdk(), [localTrack]);
+
+    const first = await container.getTracks(1, 0);
+    expect(first.items[0].id).toBe('local1');
+    expect(warnSpy).toHaveBeenCalled();
+
+    const second = await container.getTracks(1, 0);
+    expect(second.items[0].id).toBe('local1');
+    expect(resolveSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('should work with getAllTracks', async () => {
     const localTrack1 = createMockTrack('local1', 'Local Song 1', true, 'spotify:local:Test+Artist:Test+Album:Local+Song+1:180');
     const localTrack2 = createMockTrack('local2', 'Local Song 2', true, 'spotify:local:Test+Artist:Test+Album:Local+Song+2:180');
@@ -227,5 +255,286 @@ describe('TrackContainer Local Track Integration', () => {
     expect(result.items.map(t => t.id)).toEqual(['trackA', 'trackB']);
     expect(result.total).toBe(2);
     expect(result.next).toBe(null);
+  });
+
+  it('returns empty slice when offset exceeds fetched tracks', async () => {
+    const tracks = [createMockTrack('trackA', 'Track A', false)];
+    const container = new MockTrackContainer(new MockSpotifySdk(), tracks);
+
+    const result = await container.getTracks(2, 5);
+    expect(result.items).toEqual([]);
+    expect(result.next).toBeNull();
+    expect(result.total).toBe(1);
+  });
+});
+
+describe('TrackContainer pagination and caching internals', () => {
+  it('stops filling cache when next is null and supports limit -1', async () => {
+    const tracks = [
+      { id: 't1', type: 'track', is_local: false } as Track,
+      { id: 't2', type: 'track', is_local: false } as Track
+    ];
+    const getTracksSpy = vi.fn()
+      .mockResolvedValueOnce({ items: [tracks[0]], total: 2, next: 1 })
+      .mockResolvedValueOnce({ items: [tracks[1]], total: 2, next: null });
+
+    class StubContainer extends TrackContainer<Track> {
+      id = 'stub';
+      name = 'stub';
+      type: 'playlist' = 'playlist';
+      protected _standardizeTrack(raw: Track) { return raw; }
+      protected async _getTracks(limit?: number, offset?: number) {
+        return getTracksSpy(limit, offset);
+      }
+    }
+
+    const container = new StubContainer(new MockSpotifySdk());
+    const all = await container.getAllTracks();
+    expect(all.map(t => t.id)).toEqual(['t1', 't2']);
+    expect(getTracksSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('PlaylistContainer', () => {
+  const basePlaylist = {
+    id: 'plist',
+    name: 'My Playlist',
+    description: 'desc',
+    images: [{ url: 'img' }]
+  } as any;
+
+  it('standardizes only track items and rejects episodes', () => {
+    const sdk = new MockSpotifySdk();
+    const container = new PlaylistContainer(sdk as any, basePlaylist);
+    const trackItem = { track: { id: 't1', type: 'track', is_local: false } } as any;
+    expect((container as any)._standardizeTrack(trackItem)).toEqual(trackItem.track);
+    const episodeItem = { track: { id: 'e1', type: 'episode' } } as any;
+    expect(() => (container as any)._standardizeTrack(episodeItem)).toThrow(/Unsupported track type/);
+  });
+
+  it('clamps limits, paginates with next offset, and respects offset', async () => {
+    const sdk = new MockSpotifySdk();
+    sdk.setExistingTracks([
+      { id: 't1', type: 'track', is_local: false } as Track,
+      { id: 't2', type: 'track', is_local: false } as Track,
+      { id: 't3', type: 'track', is_local: false } as Track
+    ]);
+
+    const container = new PlaylistContainer(sdk as any, basePlaylist);
+
+    const first = await (container as any)._getTracks(999, 0);
+    expect(first.items.map((i: any) => i.track.id)).toEqual(['t1', 't2', 't3']);
+    expect(first.next).toBeNull();
+    expect((sdk.playlists.getPlaylistItems as any)).toHaveBeenCalledWith('plist', 'US', undefined, 50, 0);
+
+    const second = await (container as any)._getTracks(0, 2);
+    expect(second.items.map((i: any) => i.track.id)).toEqual(['t3']);
+    expect(second.next).toBeNull();
+    expect((sdk.playlists.getPlaylistItems as any)).toHaveBeenCalledWith('plist', 'US', undefined, 1, 2);
+  });
+});
+
+describe('AlbumContainer', () => {
+  const album = {
+    id: 'alb1',
+    name: 'Album Name',
+    artists: [{ name: 'Artist' }],
+    release_date: '2020-01-01',
+    images: [{ url: 'img' }]
+  } as any;
+
+  const simplifiedTrack = (id: string) =>
+    ({
+      id,
+      name: `T-${id}`,
+      type: 'track',
+      artists: [{ name: 'Artist' }],
+      duration_ms: 1000,
+      explicit: false,
+      external_urls: { spotify: '' },
+      href: '',
+      is_playable: true,
+      preview_url: null,
+      track_number: 1,
+      disc_number: 1,
+      available_markets: []
+    }) as any;
+
+  it('standardizes simplified track with album info and defaults', () => {
+    const sdk = new MockSpotifySdk();
+    const container = new AlbumContainer(sdk as any, album);
+    const standardized = (container as any)._standardizeTrack(simplifiedTrack('t1'));
+    expect(standardized.album).toEqual(album);
+    expect(standardized.type).toBe('track');
+    expect(standardized.external_ids).toEqual({});
+    expect(standardized.popularity).toBe(0);
+  });
+
+  it('clamps limits and paginates album tracks', async () => {
+    const sdk = new MockSpotifySdk();
+    sdk.setAlbumTracks('alb1', [simplifiedTrack('t1'), simplifiedTrack('t2')]);
+    const container = new AlbumContainer(sdk as any, album);
+
+    const first = await (container as any)._getTracks(999, 0);
+    expect(first.items.map((t: any) => t.id)).toEqual(['t1', 't2']);
+    expect(first.next).toBeNull();
+    expect((sdk.albums.tracks as any)).toHaveBeenCalledWith('alb1', 'US', 50, 0);
+
+    const second = await (container as any)._getTracks(0, 1);
+    expect(second.items.map((t: any) => t.id)).toEqual(['t2']);
+    expect(second.next).toBeNull();
+    expect((sdk.albums.tracks as any)).toHaveBeenCalledWith('alb1', 'US', 1, 1);
+  });
+});
+
+describe('LikedSongsContainer', () => {
+  const saved = (id: string) =>
+    ({
+      added_at: '2023-01-01T00:00:00Z',
+      track: { id, type: 'track', is_local: false, uri: `spotify:track:${id}` } as Track
+    });
+
+  it('standardizes saved tracks directly', () => {
+    const container = new LikedSongsContainer(new MockSpotifySdk() as any);
+    const track = { id: 't1', type: 'track', is_local: false } as Track;
+    expect((container as any)._standardizeTrack({ track } as any)).toBe(track);
+  });
+
+  it('clamps limits and paginates saved tracks', async () => {
+    const sdk = new MockSpotifySdk();
+    sdk.setLikedTracks([saved('t1') as any, saved('t2') as any, saved('t3') as any]);
+
+    const container = new LikedSongsContainer(sdk as any);
+    const first = await (container as any)._getTracks(999, 0);
+    expect(first.items.map((i: any) => i.track.id)).toEqual(['t1', 't2', 't3']);
+    expect(first.next).toBeNull();
+    expect((sdk.currentUser.tracks.savedTracks as any)).toHaveBeenCalledWith(50, 0);
+
+    const second = await (container as any)._getTracks(0, 1);
+    expect(second.items.map((i: any) => i.track.id)).toEqual(['t2']);
+    expect(second.next).toBe(2);
+    expect((sdk.currentUser.tracks.savedTracks as any)).toHaveBeenCalledWith(1, 1);
+  });
+});
+
+describe('RemixContainer', () => {
+  const baseTrack = (id: string): Track =>
+    ({ id, type: 'track', is_local: false, uri: `spotify:track:${id}` } as Track);
+
+  class SimpleContainer extends TrackContainer<Track> {
+    id = 'simple';
+    name = 'simple';
+    type: 'playlist' = 'playlist';
+    constructor(private provided: Track[]) { super(new MockSpotifySdk()); }
+    protected _standardizeTrack(raw: Track) { return raw; }
+    protected async _getTracks(): Promise<any> { throw new Error('unused'); }
+    async getAllTracks() { return this.provided; }
+  }
+
+  it('paginates remixed tracks without re-running remix function', async () => {
+    const inputs = new SimpleContainer([baseTrack('a'), baseTrack('b')]);
+    const remixFn = vi.fn().mockReturnValue([baseTrack('a'), baseTrack('b'), baseTrack('c')]);
+    const remix = new RemixContainer(new MockSpotifySdk(), [[inputs, {}]], remixFn);
+
+    const first = await remix.getTracks(2, 0);
+    expect(first.items.map(t => t.id)).toEqual(['a', 'b']);
+    expect(first.next).toBe(2);
+
+    const second = await remix.getTracks(2, 2);
+    expect(second.items.map(t => t.id)).toEqual(['c']);
+    expect(remixFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles concurrent load and honors clearRemixCache', async () => {
+    let resolve: ((value: Track[]) => void) | undefined;
+    const slowContainer = new SimpleContainer([baseTrack('x')]);
+    vi.spyOn(slowContainer, 'getAllTracks').mockImplementation(
+      () => new Promise(res => { resolve = res; })
+    );
+
+    const remixFn = vi.fn().mockReturnValue([baseTrack('x')]);
+    const remix = new RemixContainer(new MockSpotifySdk(), [[slowContainer, {}]], remixFn);
+
+    const p1 = remix.getAllTracks(); // kicks off load
+    const p2 = remix.getAllTracks(); // should wait on first
+    resolve!([baseTrack('x')]);
+    await Promise.all([p1, p2]);
+    expect(remixFn).toHaveBeenCalledTimes(1);
+
+    vi.spyOn(slowContainer, 'getAllTracks').mockResolvedValue([baseTrack('y')]);
+    remix.clearRemixCache();
+    await remix.getAllTracks();
+    expect(remixFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('standardizes remixed track identity and _getTracks throws', async () => {
+    const remix = new RemixContainer(new MockSpotifySdk(), [], (inputs: any) => inputs as any);
+    expect((remix as any)._standardizeTrack(baseTrack('z'))).toEqual(baseTrack('z'));
+    await expect((remix as any)._getTracks()).rejects.toThrow(/not implemented/);
+  });
+});
+
+describe('RecentTracksContainer', () => {
+  const mkHistory = (id: string, played_at = '2023-01-01T00:00:00Z'): PlayHistory =>
+    ({
+      track: { id, type: 'track', is_local: false } as Track,
+      played_at,
+      context: { uri: 'ctx' } as any
+    });
+
+  const mockSdk = () => ({
+    player: {
+      getRecentlyPlayedTracks: vi.fn()
+    }
+  });
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
+  });
+
+  it('boots from localStorage and handles malformed cache safely', () => {
+    localStorage.setItem('spotter-recent-tracks-cache', JSON.stringify({
+      tracks: [mkHistory('a')],
+      updatedAt: '2023-02-01T00:00:00Z'
+    }));
+    // Malformed entry should be ignored without throwing
+    localStorage.setItem('spotter-recent-tracks-cache', 'not-json');
+
+    expect(() => new RecentTracksContainer(mockSdk() as any)).not.toThrow();
+  });
+
+  it('merges fetched tracks and returns local cursor when match found', () => {
+    const container = new RecentTracksContainer(mockSdk() as any, 5);
+    (container as any)._storedTracks = [mkHistory('a', '2023-01-01T00:00:00Z'), mkHistory('b', '2023-01-02T00:00:00Z')];
+
+    const { items, nextCursor } = (container as any)._mergeFetchedTracks([
+      mkHistory('c', '2023-01-03T00:00:00Z'),
+      mkHistory('b', '2023-01-02T00:00:00Z')
+    ]);
+    expect(items.map((t: PlayHistory) => t.track.id)).toEqual(['c']);
+    expect(nextCursor).toBe('local:2');
+    expect((container as any)._storedTracks.length).toBe(3);
+  });
+
+  it('uses stored slice when given local cursor', async () => {
+    const sdk = mockSdk();
+    const container = new RecentTracksContainer(sdk as any, 5);
+    (container as any)._storedTracks = [mkHistory('a'), mkHistory('b'), mkHistory('c')];
+    const slice = await (container as any)._getTracks(2, 'local:1');
+    expect(slice.items.map((t: PlayHistory) => t.track.id)).toEqual(['b', 'c']);
+    expect(slice.next).toBeNull();
+  });
+
+  it('trims stored tracks to max and returns local cursor when fetched empty', () => {
+    const sdk = mockSdk();
+    const container = new RecentTracksContainer(sdk as any, 2);
+    (container as any)._storedTracks = [mkHistory('a'), mkHistory('b'), mkHistory('c')];
+    (container as any)._trimStoredTracks();
+    expect((container as any)._storedTracks.length).toBe(2);
+
+    const { items, nextCursor } = (container as any)._mergeFetchedTracks([]);
+    expect(items).toEqual([]);
+    expect(nextCursor).toBe('local:0');
   });
 });

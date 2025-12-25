@@ -1,4 +1,4 @@
-import { PlayHistory, Track } from '@spotify/web-api-ts-sdk';
+import { PlayHistory, Track, SavedTrack } from '@spotify/web-api-ts-sdk';
 import { vi } from 'vitest';
 
 type SearchHandler = (
@@ -20,6 +20,8 @@ export class MockSpotifySdk {
   private nextPlaylistId = 1;
   private recentTracks: PlayHistory[] = [];
   private recentLimit: number;
+  private albumTracks: Record<string, Track[]> = {};
+  private likedTracks: SavedTrack[] = [];
 
   constructor(searchHandler?: SearchHandler, options?: { recentLimit?: number }) {
     this.search = vi.fn(
@@ -36,7 +38,17 @@ export class MockSpotifySdk {
   search: ReturnType<typeof vi.fn>;
 
   currentUser = {
-    profile: async () => ({ id: 'test-user-id' })
+    profile: async () => ({ id: 'test-user-id' }),
+    tracks: {
+      savedTracks: vi.fn(async (limit: number = 50, offset: number = 0) => {
+        const clampedLimit = Math.min(Math.max(limit, 1), 50);
+        const items = this.likedTracks.slice(offset, offset + clampedLimit);
+        return {
+          items,
+          total: this.likedTracks.length
+        };
+      })
+    }
   };
 
   playlists = {
@@ -50,12 +62,14 @@ export class MockSpotifySdk {
       };
     },
 
-    getPlaylistItems: async (_playlistId: string) => {
+    getPlaylistItems: vi.fn(async (_playlistId: string, _market?: string, _fields?: any, limit: number = 50, offset: number = 0) => {
+      const clampedLimit = Math.min(Math.max(limit, 1), 50);
+      const items = this.playlistTracks.slice(offset, offset + clampedLimit).map(track => ({ track }));
       return {
-        items: this.playlistTracks.map(track => ({ track })),
+        items,
         total: this.playlistTracks.length
       };
-    },
+    }),
 
     addItemsToPlaylist: async (_playlistId: string, trackUris: string[]) => {
       // Check for failure before adding
@@ -91,6 +105,17 @@ export class MockSpotifySdk {
     }
   };
 
+  albums = {
+    tracks: vi.fn(async (albumId: string, _market: string = 'US', limit: number = 50, offset: number = 0) => {
+      const tracks = this.albumTracks[albumId] ?? [];
+      const clampedLimit = Math.min(Math.max(limit, 1), 50);
+      return {
+        items: tracks.slice(offset, offset + clampedLimit),
+        total: tracks.length
+      };
+    })
+  };
+
   player = {
     getRecentlyPlayedTracks: async (limit: number = 50, _range?: { type: 'before'; timestamp: string }) => {
       const safeLimit = Math.min(Math.max(limit, 1), this.recentLimit);
@@ -118,6 +143,14 @@ export class MockSpotifySdk {
     }
   }
 
+  setAlbumTracks(albumId: string, tracks: Track[]): void {
+    this.albumTracks[albumId] = tracks;
+  }
+
+  setLikedTracks(tracks: SavedTrack[]): void {
+    this.likedTracks = [...tracks];
+  }
+
   setFailurePoints(trackCounts: number[], message: string = 'Simulated API failure'): void {
     this.failurePoints = [...trackCounts];
     this.failureMessage = message;
@@ -128,6 +161,7 @@ export class MockSpotifySdk {
     this.failurePoints = [];
     this.tracksAddedCount = 0;
     this.failureMessage = 'Simulated API failure';
+    this.likedTracks = [];
     if (this.search.mockReset) {
       this.search.mockReset();
     }
