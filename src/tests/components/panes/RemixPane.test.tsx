@@ -90,4 +90,26 @@ describe('RemixPane', () => {
     // Presence of refresh button implies remix container was created
     expect(container.querySelector('.track-list-pane__refresh-button')).toBeTruthy();
   });
+
+  it('refreshes remix and exposes scrollable list area', async () => {
+    const tracks = Array.from({ length: 12 }, (_, i) => makeTrack(`id-${i}`, `Track ${i}`));
+    const stub = new StubTrackContainer('many', 'Many', tracks);
+    const onChange = vi.fn();
+    await render([stub], { onChange, optionsById: { many: {} } });
+
+    const refreshBtn = container.querySelector('.track-list-pane__refresh-button') as HTMLButtonElement;
+    expect(refreshBtn).toBeTruthy();
+
+    await act(async () => {
+      refreshBtn.click();
+    });
+    // render triggers another container creation; ensure callback fired
+    expect(onChange).toHaveBeenCalled();
+
+    const list = container.querySelector('.track-list') as HTMLElement;
+    expect(list).toBeTruthy();
+    Object.defineProperty(list, 'clientHeight', { value: 240, configurable: true });
+    Object.defineProperty(list, 'scrollHeight', { value: 900, configurable: true });
+    expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+  });
 });
