@@ -25,7 +25,8 @@ export default defineConfig({
         'src/tests/helpers/**'
       ],
       exclude: [
-        'src/**/*.css'
+        'src/**/*.css',
+        'src/pages/TestbedPage.tsx',
       ]
     }
   },
