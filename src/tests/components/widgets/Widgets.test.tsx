@@ -77,4 +77,42 @@ describe('Widgets', () => {
     expect(button.disabled).toBe(true);
     expect(button.textContent).toContain('all tracks');
   });
+
+  it('auto-dismisses and closes when clicking outside', async () => {
+    vi.useFakeTimers();
+    const onLimitChange = vi.fn();
+    act(() => {
+      root = createRoot(container);
+      root.render(createElement(LimitSlider, { totalCount: 3, limit: 2, onLimitChange }));
+    });
+
+    const button = container.querySelector('button') as HTMLButtonElement;
+    await act(async () => button.click());
+    expect(container.querySelector('.track-limit-popover')).toBeTruthy();
+
+    // outside click should close
+    await act(async () => {
+      document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    });
+    expect(container.querySelector('.track-limit-popover')).toBeNull();
+
+    // reopen and ensure timer dismisses
+    await act(async () => button.click());
+    expect(container.querySelector('.track-limit-popover')).toBeTruthy();
+    await act(async () => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(container.querySelector('.track-limit-popover')).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('ignores clicks when disabled and keeps popover closed', async () => {
+    act(() => {
+      root = createRoot(container);
+      root.render(createElement(LimitSlider, { totalCount: 5, limit: null, onLimitChange: vi.fn(), disabled: true }));
+    });
+    const button = container.querySelector('button') as HTMLButtonElement;
+    await act(async () => button.click());
+    expect(container.querySelector('.track-limit-popover')).toBeNull();
+  });
 });

@@ -125,6 +125,7 @@ describe('ExportPane', () => {
   afterEach(() => {
     act(() => root?.unmount());
     container.remove();
+    vi.restoreAllMocks();
   });
 
   const render = async (
@@ -230,6 +231,27 @@ describe('ExportPane', () => {
     expect(container.querySelector('.export-progress-overlay')).toBeTruthy();
   });
 
+  it('updates playlist inputs and toggles modes', async () => {
+    await render('playlist');
+    const nameInput = container.querySelector('#playlist-name') as HTMLInputElement;
+    const descInput = container.querySelector('#playlist-description') as HTMLTextAreaElement;
+    await act(async () => {
+      Simulate.change(nameInput, { target: { value: 'New Name' } } as any);
+      Simulate.change(descInput, { target: { value: 'New Desc' } } as any);
+    });
+    expect(nameInput.value).toBe('New Name');
+    expect(descInput.value).toBe('New Desc');
+  });
+
+  it('changes queue device selection on change event', async () => {
+    await render('queue', { devices: [{ id: 'dev1', name: 'Device 1', is_active: true }, { id: 'dev2', name: 'Device 2', is_active: false }] });
+    const select = container.querySelector('#queue-device-select') as HTMLSelectElement;
+    await act(async () => {
+      Simulate.change(select, { target: { value: 'dev2' } } as any);
+    });
+    expect(select.value).toBe('dev2');
+  });
+
   it('replaces existing playlist and shows last created link on new playlist', async () => {
     await render('playlist');
     const pickerButton = container.querySelector('.playlist-picker-button') as HTMLButtonElement;
@@ -251,5 +273,67 @@ describe('ExportPane', () => {
     await act(async () => exportBtn.click());
     await act(async () => new Promise(resolve => setTimeout(resolve, 0)));
     expect(container.querySelector('.playlist-link-button')).toBeTruthy();
+  });
+
+  it('opens last created playlist link and dismisses overlay', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as any);
+    await render('playlist');
+    const exportBtn = container.querySelector('.export-button') as HTMLButtonElement;
+    await act(async () => exportBtn.click());
+    await act(async () => Promise.resolve());
+
+    const linkButton = container.querySelector('.playlist-link-button') as HTMLButtonElement;
+    await act(async () => linkButton.click());
+    expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('spotify.com/playlist/pl-created'), '_blank');
+
+    const overlay = container.querySelector('.export-progress-overlay') as HTMLElement;
+    await act(async () => overlay.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(container.querySelector('.export-progress-overlay')).toBeNull();
+  });
+
+  it('shows queue error when device loading fails and disables export', async () => {
+    sdk.player.getAvailableDevices.mockRejectedValueOnce(new Error('fail devices'));
+    await render('queue');
+    const errorText = container.querySelector('.export-feedback--error')?.textContent ?? '';
+    expect(errorText).toContain('Unable to load your Spotify devices');
+
+    const exportBtn = container.querySelector('.export-button') as HTMLButtonElement;
+    expect(exportBtn.disabled).toBe(true);
+  });
+
+  it('retries playlist fetch when picker errors', async () => {
+    sdk.currentUser.playlists.playlists.mockRejectedValueOnce(new Error('boom'));
+    sdk.currentUser.playlists.playlists.mockResolvedValueOnce({
+      items: [
+        { id: 'p2', name: 'After Retry', owner: { display_name: 'owner' }, images: [], tracks: { total: 1 } }
+      ]
+    });
+    await render('playlist');
+    const pickerButton = container.querySelector('.playlist-picker-button') as HTMLButtonElement;
+    await act(async () => pickerButton.click());
+    await act(async () => Promise.resolve());
+
+    const retryBtn = Array.from(container.querySelectorAll('button')).find(btn =>
+      btn.textContent?.includes('Try again')
+    ) as HTMLButtonElement;
+    expect(retryBtn).toBeTruthy();
+    await act(async () => retryBtn.click());
+    await act(async () => Promise.resolve());
+    const pickerItem = container.querySelector('.playlist-picker-item') as HTMLButtonElement;
+    expect(pickerItem?.textContent).toContain('After Retry');
+  });
+
+  it('renders fallback state when remix container is missing', async () => {
+    await act(async () => {
+      root = createRoot(container);
+      root.render(
+        createElement(ExportPane, {
+          sdk,
+          remixContainer: null,
+          excludedTrackIds: new Set()
+        })
+      );
+    });
+    expect(container.textContent).toContain('Create a remix first');
   });
 });

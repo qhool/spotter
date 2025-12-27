@@ -57,6 +57,8 @@ describe('HamburgerMenu', () => {
   afterEach(() => {
     vi.useRealTimers();
     (AboutOverlay as unknown as Mock).mockClear();
+    vi.restoreAllMocks();
+    localStorage.clear();
     document.body.innerHTML = '';
     cleanup?.();
   });
@@ -162,5 +164,83 @@ describe('HamburgerMenu', () => {
     const rect = dropdown.getBoundingClientRect();
     expect(rect.left).toBeGreaterThanOrEqual(0);
     expect(rect.right).toBeLessThanOrEqual(window.innerWidth || 1024);
+  });
+
+  it('closes when clicking outside the dropdown', async () => {
+    const { container, root } = await renderMenu();
+    cleanup = () => root.unmount();
+    await act(async () => {});
+    const button = container.querySelector('.hamburger-button') as HTMLButtonElement;
+
+    await act(async () => button.click());
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+
+    await act(async () => {
+      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('falls back to default avatar and logs profile errors', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const sdk = {
+      currentUser: {
+        profile: vi.fn(async () => {
+          throw new Error('profile fail');
+        })
+      },
+      logOut: vi.fn()
+    } as any;
+
+    const { container, root } = await renderMenu(sdk);
+    cleanup = () => root.unmount();
+    await act(async () => {});
+    expect(consoleSpy).toHaveBeenCalled();
+
+    await act(async () => {
+      const button = container.querySelector('.hamburger-button') as HTMLButtonElement;
+      button.click();
+    });
+    // userProfile remains null; no avatar rendered
+    expect(container.querySelector('.avatar-fallback')).toBeNull();
+  });
+
+  it('shows avatar fallback when profile has no image', async () => {
+    const sdk = {
+      currentUser: {
+        profile: vi.fn(async () => ({
+          display_name: 'No Pic',
+          images: []
+        }))
+      },
+      logOut: vi.fn()
+    } as any;
+    const { container, root } = await renderMenu(sdk);
+    cleanup = () => root.unmount();
+    await act(async () => {});
+    const button = container.querySelector('.hamburger-button') as HTMLButtonElement;
+
+    await act(async () => button.click());
+    const fallback = container.querySelector('.avatar-fallback');
+    expect(fallback).toBeTruthy();
+  });
+
+  it('logs errors when logout fails but still clears tokens', async () => {
+    const sdk = makeSdk();
+    sdk.logOut = vi.fn(() => {
+      throw new Error('logout fail');
+    });
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    localStorage.setItem('spotify-sdk-refresh-token', 'y');
+    const { container, root } = await renderMenu(sdk);
+    cleanup = () => root.unmount();
+    await act(async () => {});
+    const button = container.querySelector('.hamburger-button') as HTMLButtonElement;
+    await act(async () => button.click());
+    const logoutBtn = container.querySelector('.logout-item') as HTMLButtonElement;
+
+    await act(async () => logoutBtn.click());
+    expect(consoleSpy).toHaveBeenCalled();
+    expect(localStorage.getItem('spotify-sdk-refresh-token')).toBeNull();
   });
 });

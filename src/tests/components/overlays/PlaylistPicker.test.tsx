@@ -88,4 +88,34 @@ describe('PlaylistPicker', () => {
     Object.defineProperty(listBody, 'scrollHeight', { value: 800, configurable: true });
     expect(listBody.scrollHeight).toBeGreaterThan(listBody.clientHeight);
   });
+
+  it('closes when escape is pressed and when clicking backdrop', async () => {
+    const onClose = vi.fn();
+    await renderPicker({ onClose });
+    const overlay = container.querySelector('.playlist-picker-overlay') as HTMLElement;
+
+    await act(async () => {
+      overlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    const backdrop = container.querySelector('.playlist-picker-backdrop') as HTMLElement;
+    await act(async () => {
+      backdrop.click();
+    });
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('surfaces retry control when error is present', async () => {
+    const onRetry = vi.fn();
+    await renderPicker({ error: 'Load failed', onRetry });
+
+    const retryButton = Array.from(
+      container.querySelectorAll('button.text-button')
+    ).find(btn => btn.textContent?.includes('Try again')) as HTMLButtonElement;
+    expect(retryButton).toBeTruthy();
+
+    await act(async () => retryButton.click());
+    expect(onRetry).toHaveBeenCalled();
+  });
 });

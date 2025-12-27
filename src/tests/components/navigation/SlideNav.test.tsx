@@ -69,6 +69,31 @@ const renderNav = (itemsCount: number, selectedIndex: number) => {
     const iconProps = iconPropsKey ? (icons[0] as any)[iconPropsKey] : {};
     iconProps.onClick?.();
     expect(clicks.some(fn => fn.mock.calls.length > 0)).toBe(true);
+
+    const rightIcon = icons.find(el => el.classList.contains('nav-item-2'));
+    const rightPropsKey = rightIcon ? Object.keys(rightIcon).find(k => k.startsWith('__reactProps$')) : null;
+    const rightProps = rightPropsKey && rightIcon ? (rightIcon as any)[rightPropsKey] : {};
+    act(() => {
+      rightProps.onMouseEnter?.();
+      rightProps.onMouseLeave?.();
+    });
+  });
+
+  it('applies hover state on groups when entering and leaving', () => {
+    renderNav(3, 1);
+    const btn = container.querySelector('.slide-nav-item.nav-item-0') as HTMLButtonElement;
+    const propsKey = Object.keys(btn).find(k => k.startsWith('__reactProps$'));
+    const props = propsKey ? (btn as any)[propsKey] : {};
+
+    act(() => {
+      props.onMouseEnter?.();
+    });
+    expect(btn.className).toContain('group-hover');
+
+    act(() => {
+      props.onMouseLeave?.();
+    });
+    expect(btn.className).not.toContain('group-hover');
   });
 
   it('handles different visible counts up to 4 items', () => {
@@ -84,5 +109,11 @@ const renderNav = (itemsCount: number, selectedIndex: number) => {
       }
       act(() => root?.unmount());
     });
+  });
+
+  it('returns early when selected item ref is missing', () => {
+    renderNav(0, 0);
+    const inner = container.querySelector('.slide-nav-inner') as HTMLElement;
+    expect(inner.style.transform).toContain('translateX(0px)');
   });
 });

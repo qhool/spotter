@@ -234,4 +234,47 @@ describe('SearchPane', () => {
     expect(titles).toContain('Album groove');
     expect(titles).not.toContain('Album mix');
   });
+
+  it('clears search via clear icon and prevents empty submit', async () => {
+    await renderPane();
+    await flush();
+    const input = container.querySelector('.search-input') as HTMLInputElement;
+    input.value = 'mix';
+    await act(async () => Simulate.change(input));
+    const clear = container.querySelector('.search-clear-icon') as HTMLElement;
+    expect(clear).toBeTruthy();
+    await act(async () => clear.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    expect(input.value).toBe('');
+
+    const submit = container.querySelector('.search-submit-icon') as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+  });
+
+  it('loads more search results when next page exists', async () => {
+    sdk.search = vi.fn(async (query: string, types: string[], _market: string, _limit: number, offset: number) => {
+      return {
+        playlists: {
+          items: [makePlaylist(`${query}-${offset}`, `Found ${query}-${offset}`)],
+          total: 3,
+          limit: 1,
+          offset,
+          next: offset < 2 ? 'next' : null
+        }
+      };
+    }) as any;
+
+    await renderPane();
+    await flush();
+    const input = container.querySelector('.search-input') as HTMLInputElement;
+    input.value = 'mix';
+    await act(async () => Simulate.change(input));
+    await act(async () => Simulate.submit(container.querySelector('form') as HTMLFormElement));
+    await flush();
+
+    const loadMoreBtn = container.querySelector('.text-button') as HTMLButtonElement | null;
+    expect(loadMoreBtn).not.toBeNull();
+    await act(async () => loadMoreBtn!.click());
+    await flush();
+    expect((sdk.search as any).mock.calls[1][4]).toBe(1); // offset advanced by limit 1
+  });
 });
