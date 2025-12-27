@@ -1,17 +1,19 @@
 import { defineConfig } from 'vitest/config'
 
+const enableUI = process.env.VITEST_UI === 'true';
+
 export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    ui: true,
-    api: true,
+    ui: enableUI,
+    api: enableUI,
     includeSource: ['src/**/*.ts', 'src/**/*.tsx'],
     includeTaskLocation: true,
-    open: true,
+    open: enableUI,
     setupFiles: [],
     coverage: {
-      enabled: true,
+      //enabled: true,
       provider: 'v8',
       reporter: ['text', 'text-summary', 'html', 'lcov'],
       include: [

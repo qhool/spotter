@@ -10,7 +10,7 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
-    "test:ui": "vitest --ui --open",
+    "test:ui": "VITEST_UI=true vitest --ui --open",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
