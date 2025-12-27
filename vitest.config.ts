@@ -27,6 +27,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.css',
         'src/pages/TestbedPage.tsx',
+        'src/hooks/useSpotify.ts',
       ]
     }
   },
