@@ -161,4 +161,14 @@ describe('Wizard', () => {
     const visiblePanes = Array.from(container.querySelectorAll('[data-visible="true"]'));
     expect(visiblePanes.length).toBeGreaterThan(0);
   });
+
+  it('warns on invalid viewTitles and handles zero panes', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await renderWizard(700, { viewTitles: { 1: ['Only one'], 3: ['missing'] }, panes: panes.slice(0, 2) });
+    expect(warnSpy).toHaveBeenCalled();
+
+    await renderWizard(700, { panes: [] });
+    expect(container.querySelector('.wizard-nav')).toBeNull();
+    warnSpy.mockRestore();
+  });
 });

@@ -76,4 +76,12 @@ describe('AboutOverlay', () => {
     });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('returns null when portal target is missing', () => {
+    const realDocument = globalThis.document;
+    (globalThis as any).document = { body: null } as any;
+    const result = AboutOverlay({ isOpen: true, onClose: vi.fn() });
+    expect(result).toBeNull();
+    (globalThis as any).document = realDocument;
+  });
 });

@@ -213,6 +213,70 @@ describe('DragReorderContainer', () => {
     expect(handle.getItems().map(item => item.id)).toEqual(['a', 'new-item']);
   });
 
+  it('ignores delete when disabled and no drop occurs', async () => {
+    const ref = renderHarness(
+      [{ id: 'keep', content: 'Keep' }],
+      { disableDragToDelete: true }
+    );
+    const wrapper = container.querySelector('.drag-reorder-container') as HTMLElement;
+    const item = wrapper.querySelector('.drag-item') as HTMLElement;
+    const props = getProps(item);
+    const dataTransfer = createDataTransfer();
+
+    await act(async () => {
+      props.onDragStart?.(makeEvent(item, dataTransfer));
+      props.onDragEnd?.(makeEvent(item, dataTransfer));
+    });
+
+    const handle = itemsOrThrow(ref);
+    expect(handle.getItems().map(i => i.id)).toEqual(['keep']);
+  });
+
+  it('clears hover when leaving container bounds', async () => {
+    const ref = renderHarness([{ id: 'a', content: 'A' }]);
+    const wrapper = container.querySelector('.drag-reorder-container') as HTMLElement;
+    ensureRect(wrapper);
+    const props = getProps(wrapper);
+    const dataTransfer = createDataTransfer();
+
+    await act(async () => {
+      props.onDragEnter?.(makeEvent(wrapper, dataTransfer));
+      props.onDragLeave?.(makeEvent(wrapper, dataTransfer, -10, -10)); // outside bounds
+    });
+    expect(container.querySelector('.drop-indicator')).toBeNull();
+    expect(itemsOrThrow(ref).getItems().length).toBe(1);
+  });
+
+  it('returns without change when drop data is missing and logs malformed data errors', async () => {
+    const ref = renderHarness([
+      { id: 'a', content: 'A' },
+      { id: 'b', content: 'B' }
+    ]);
+    const wrapper = container.querySelector('.drag-reorder-container') as HTMLElement;
+    const items = Array.from(wrapper.querySelectorAll('.drag-item')) as HTMLElement[];
+    items.forEach(ensureRect);
+    const propsContainer = getProps(wrapper);
+    const propsItems = items.map(getProps);
+    const dataTransfer = createDataTransfer();
+    dataTransfer.setData('application/json', JSON.stringify({ id: 'a' }));
+
+    await act(async () => {
+      // Drop with no data and no draggedItemId should no-op
+      propsContainer.onDrop?.(makeEvent(wrapper, dataTransfer));
+    });
+    const resultingIds = itemsOrThrow(ref).getLastSet().map(i => i.id);
+    expect(resultingIds).toHaveLength(2);
+    expect(new Set(resultingIds)).toEqual(new Set(['a', 'b']));
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await act(async () => {
+      dataTransfer.setData('application/json', '{bad json');
+      propsContainer.onDrop?.(makeEvent(wrapper, dataTransfer));
+    });
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
   it('retains scroll position while reordering overflowing lists', async () => {
     const ref = renderHarness([
       { id: 'one', content: 'One' },

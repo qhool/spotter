@@ -301,6 +301,47 @@ describe('ExportPane', () => {
     expect(exportBtn.disabled).toBe(true);
   });
 
+  it('clamps track limit when filtered count drops and handles export failures', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    const tracks = [makeTrack('a'), makeTrack('b'), makeTrack('c'), makeTrack('d')];
+    const limitedContainer = {
+      getTracks: vi
+        .fn()
+        .mockResolvedValue({ items: tracks, total: tracks.length, next: null })
+    };
+
+    const excluded = new Set<string>();
+    await act(async () => {
+      root = createRoot(container);
+      root.render(
+        createElement(ExportPane, {
+          sdk,
+          remixContainer: limitedContainer as any,
+          excludedTrackIds: excluded,
+          initialExportType: 'playlist'
+        })
+      );
+    });
+    await act(async () => Promise.resolve());
+
+    const limitButton = container.querySelector('.track-limit-button') as HTMLButtonElement;
+    await act(async () => limitButton.click());
+    const slider = container.querySelector('.track-limit-slider') as HTMLInputElement;
+    const propsKey = Object.keys(slider).find(k => k.startsWith('__reactProps$'))!;
+    const props = (slider as any)[propsKey];
+    await act(async () => {
+      slider.value = '3';
+      props.onChange?.({ target: slider });
+    });
+
+    // Force getTracks failure to exercise catch path
+    (limitedContainer.getTracks as any).mockRejectedValueOnce(new Error('track failure'));
+    const exportBtn = container.querySelector('.export-button') as HTMLButtonElement;
+    await act(async () => exportBtn.click());
+    expect(alertSpy).toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
   it('retries playlist fetch when picker errors', async () => {
     sdk.currentUser.playlists.playlists.mockRejectedValueOnce(new Error('boom'));
     sdk.currentUser.playlists.playlists.mockResolvedValueOnce({

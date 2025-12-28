@@ -158,4 +158,51 @@ describe('TrackList', () => {
 
     expect(spy).toHaveBeenCalledWith(tracks);
   });
+
+  it('handles clicks when exclusion disabled and renders local/resolved indicators with long duration', async () => {
+    const tracks = [
+      { ...createTrack('local', 'Local'), is_local: true },
+      { ...createTrack('resolved', 'Resolved'), is_local: false, original_local: { id: 'orig' } as any, duration_ms: 4 * 3600 * 1000 + 1234 }
+    ] as Track[];
+    const stub = new StubTrackContainer(tracks);
+
+    await act(async () => {
+      root = createRoot(container);
+      root.render(
+        createElement(TrackList, {
+          trackContainer: stub,
+          refreshTrigger: 0,
+          excludedTrackIds: new Set(['local']) // but no setter to toggle
+        })
+      );
+    });
+
+    const items = Array.from(container.querySelectorAll('.track-item')) as HTMLElement[];
+    expect(items[0].className).toContain('local-track');
+    expect(items[1].className).toContain('resolved-local');
+
+    const durationText = items[1].querySelector('.track-duration')?.textContent ?? '';
+    expect(durationText).toContain('4:'); // hours formatting path
+
+    await act(async () => {
+      items[0].click(); // no setter, should no-op
+    });
+    expect(items[0].className).toContain('excluded'); // initial flag remains
+  });
+
+  it('recovers gracefully when load fails and onTracksLoaded still fires empty array', async () => {
+    const failing = new StubTrackContainer([], true);
+    const spy = vi.fn();
+    await act(async () => {
+      root = createRoot(container);
+      root.render(
+        createElement(TrackList, {
+          trackContainer: failing,
+          refreshTrigger: 0,
+          onTracksLoaded: spy
+        })
+      );
+    });
+    expect(spy).toHaveBeenCalledWith([]);
+  });
 });

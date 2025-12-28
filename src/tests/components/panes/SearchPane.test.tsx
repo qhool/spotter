@@ -277,4 +277,12 @@ describe('SearchPane', () => {
     await flush();
     expect((sdk.search as any).mock.calls[1][4]).toBe(1); // offset advanced by limit 1
   });
+
+  it('handles errors when fetching personal playlists by resetting state', async () => {
+    sdk.currentUser.playlists.playlists.mockRejectedValueOnce(new Error('boom'));
+    await renderPane();
+    await flush();
+    const list = container.querySelector('.search-results') as HTMLElement;
+    expect(list.textContent).toContain('No playlists found');
+  });
 });
