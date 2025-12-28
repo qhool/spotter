@@ -44,6 +44,10 @@ export abstract class TrackContainer<TrackType = Track> {
     this.sdk = sdk;
   }
 
+  public getTrackCount(): number | null {
+    return this.totalCount ?? null;
+  }
+
   // Abstract method to standardize raw track to Spotify Track format
   protected abstract _standardizeTrack(rawTrack: TrackType): Track;
 
@@ -74,6 +78,9 @@ export abstract class TrackContainer<TrackType = Track> {
       }
       
       this.totalCount = response.total;
+      if (upTo !== -1 && this.totalCount !== undefined && upTo < this.totalCount) {
+        upTo = this.totalCount;
+      }
       if( upTo === -1 ) {
         upTo = this.totalCount;
       }
@@ -197,6 +204,7 @@ export class PlaylistContainer extends TrackContainer<PlaylistedTrack> {
     this.name = playlist.name;
     this.description = playlist.description || undefined;
     this.coverImage = playlist.images?.[0];
+    this.totalCount = playlist.tracks?.total ?? this.totalCount;
   }
 
   protected _standardizeTrack(rawTrack: PlaylistedTrack): Track {
@@ -247,6 +255,7 @@ export class AlbumContainer extends TrackContainer<SimplifiedTrack> {
     this.name = album.name;
     this.description = `${album.artists.map(artist => artist.name).join(', ')} • ${album.release_date.substring(0, 4)}`;
     this.coverImage = album.images?.[0];
+    this.totalCount = album.total_tracks ?? this.totalCount;
   }
 
   protected _standardizeTrack(rawTrack: SimplifiedTrack): Track {
@@ -286,6 +295,7 @@ export class LikedSongsContainer extends TrackContainer<SavedTrack> {
     super(sdk);
     // Use a local image for liked songs with proper base URL resolution
     this.coverImage = { url: resolveAssetUrl('/images/liked-songs.png') };
+    this.totalCount = _totalCount;
   }
 
   protected _standardizeTrack(rawTrack: SavedTrack): Track {
@@ -367,6 +377,7 @@ export class RemixContainer<RemixOptionsType extends RemixOptions> extends Track
         
       // Apply the remix function
       this.remixedTracks = this.remixFunction(remixInputs);
+      this.totalCount = this.remixedTracks.length;
       return this.remixedTracks;
     } finally {
       this.isLoading = false;
@@ -421,6 +432,9 @@ export class RecentTracksContainer extends TrackContainer<PlayHistory> {
     // Use a local image for recent tracks with proper base URL resolution
     this.coverImage = { url: resolveAssetUrl('/images/recent-tracks.png') };
     this._ensureStoredTracksLoaded();
+    if (this._storedTracks.length > 0) {
+      this.totalCount = this._storedTracks.length;
+    }
   }
 
   public getLastUpdated(): Date | null {

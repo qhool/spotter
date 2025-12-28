@@ -35,6 +35,13 @@ export function SelectedItemsPane({
   }
 
   const getItemId = useCallback((item: TrackContainer<any>) => item.id, []);
+  const totalTracks = items.reduce((sum, item) => {
+    const count =
+      typeof (item as any).getTrackCount === 'function'
+        ? (item as any).getTrackCount()
+        : (item as any).totalCount;
+    return sum + (typeof count === 'number' && isFinite(count) ? count : 0);
+  }, 0);
 
   const renderSelectedItem = useCallback(
     (item: TrackContainer<any>) => (
@@ -68,7 +75,7 @@ export function SelectedItemsPane({
               <div className="selected-items-pane__header">
                 <h3>{title}</h3>
                 {items.length > 0 && (
-                  <span className="selected-items-pane__count">{items.length}</span>
+                  <span className="selected-items-pane__count">{totalTracks} Tracks</span>
                 )}
               </div>
             )}

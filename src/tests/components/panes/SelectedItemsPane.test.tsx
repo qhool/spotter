@@ -6,7 +6,14 @@ import { SelectedItemsPane } from '../../../components/panes/SelectedItemsPane';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-type Item = { id: string; name: string; type: 'playlist' | 'album'; coverImage?: { url: string } };
+type Item = {
+  id: string;
+  name: string;
+  type: 'playlist' | 'album';
+  coverImage?: { url: string };
+  getTrackCount?: () => number;
+  totalCount?: number;
+};
 
 let lastDragProps: any = null;
 
@@ -37,8 +44,8 @@ describe('SelectedItemsPane', () => {
   let root: ReturnType<typeof createRoot> | null;
 
   const makeItems = (): Item[] => [
-    { id: 'a', name: 'Playlist A', type: 'playlist', coverImage: { url: 'a.png' } },
-    { id: 'b', name: 'Album B', type: 'album' }
+    { id: 'a', name: 'Playlist A', type: 'playlist', coverImage: { url: 'a.png' }, getTrackCount: () => 20 },
+    { id: 'b', name: 'Album B', type: 'album', getTrackCount: () => 12 }
   ];
 
   beforeEach(() => {
@@ -85,7 +92,7 @@ describe('SelectedItemsPane', () => {
 
     const tiles = Array.from(container.querySelectorAll('.item-tile')) as HTMLElement[];
     expect(tiles.length).toBe(2);
-    expect(container.querySelector('.selected-items-pane__count')?.textContent).toBe('2');
+    expect(container.querySelector('.selected-items-pane__count')?.textContent).toBe('32 Tracks');
     expect(container.querySelectorAll('.custom-control').length).toBeGreaterThan(0);
 
     const removeButtons = Array.from(container.querySelectorAll('.remove-button')) as HTMLButtonElement[];
@@ -107,10 +114,9 @@ describe('SelectedItemsPane', () => {
     await act(async () => {
       mockItems[0].click();
     });
-    expect(setItems).toHaveBeenCalledWith([
-      { id: 'b', name: 'Album B', type: 'album' },
-      { id: 'a', name: 'Playlist A', type: 'playlist', coverImage: { url: 'a.png' } }
-    ]);
+    expect(setItems).toHaveBeenCalled();
+    const reordered = setItems.mock.calls[0][0];
+    expect(reordered.map((i: Item) => i.id)).toEqual(['b', 'a']);
   });
 
   it('indicates scrollable area when many items exist', async () => {
@@ -121,5 +127,16 @@ describe('SelectedItemsPane', () => {
     Object.defineProperty(listWrapper, 'clientHeight', { value: 240, configurable: true });
     Object.defineProperty(listWrapper, 'scrollHeight', { value: 800, configurable: true });
     expect(listWrapper.scrollHeight).toBeGreaterThan(listWrapper.clientHeight);
+  });
+
+  it('sums track counts across items using getTrackCount or totalCount', async () => {
+    const items: any[] = [
+      { id: 'pl', name: 'Playlist', type: 'playlist', getTrackCount: () => 15 },
+      { id: 'al', name: 'Album', type: 'album', totalCount: 8 },
+      { id: 'ls', name: 'Liked', type: 'playlist' } // no count -> treated as 0
+    ];
+
+    await renderPane({ items, title: 'Selected Items' });
+    expect(container.querySelector('.selected-items-pane__count')?.textContent).toBe('23 Tracks');
   });
 });

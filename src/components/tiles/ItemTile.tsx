@@ -15,6 +15,11 @@ interface ItemTileProps {
 
 export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging = false, controls }: ItemTileProps) {
   //console.log('Rendering item:', item); // Debug log
+  const trackCount =
+    typeof (item as any).getTrackCount === 'function'
+      ? (item as any).getTrackCount()
+      : (item as any).totalCount ?? null;
+  const trackCountLabel = trackCount != null ? String(trackCount) : null;
   
   return (
     <div 
@@ -42,6 +47,11 @@ export function ItemTile({ item, contentType, onDragStart, onDragEnd, isDragging
           <p className="item-description">{item.description}</p>
         )}
       </div>
+      {trackCountLabel && (
+        <div className="item-meta">
+          <span className="item-track-count">{trackCountLabel}</span>
+        </div>
+      )}
       {controls && (
         <div className="item-controls">
           {controls}

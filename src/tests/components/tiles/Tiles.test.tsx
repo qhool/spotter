@@ -93,6 +93,28 @@ describe('Tiles components', () => {
     expect(container.textContent).toContain('♥');
   });
 
+  it('shows track counts for playlists, albums, and liked songs', () => {
+    const playlist = stubItem({ getTrackCount: () => 25, type: 'playlist' });
+    const album = stubItem({ getTrackCount: () => 10, type: 'album' }, 'album');
+    const liked = stubItem({ getTrackCount: () => 5, type: 'liked-songs' });
+
+    act(() => {
+      root = createRoot(container);
+      root.render(
+        createElement('div', null, [
+          createElement(ItemTile, { key: 'pl', item: playlist, contentType: 'playlist' }),
+          createElement(ItemTile, { key: 'al', item: album, contentType: 'album' }),
+          createElement(ItemTile, { key: 'ls', item: liked, contentType: 'playlist' })
+        ])
+      );
+    });
+
+    const counts = Array.from(container.querySelectorAll('.item-track-count')).map(el => el.textContent);
+    expect(counts).toContain('25');
+    expect(counts).toContain('10');
+    expect(counts).toContain('5');
+  });
+
   it('handles drag start/end hooks and dragging class', () => {
     const onDragStart = vi.fn();
     const onDragEnd = vi.fn();
