@@ -3,15 +3,16 @@ import { act } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
 import { SelectedItemsPane } from '../../../components/panes/SelectedItemsPane';
+import type { TrackContainer } from '../../../data/TrackContainer';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-type Item = {
+type Item = TrackContainer<any> & {
   id: string;
   name: string;
-  type: 'playlist' | 'album';
+  type: 'playlist' | 'album' | 'liked-songs';
   coverImage?: { url: string };
-  getTrackCount?: () => number;
+  getTrackCount?: () => number | null;
   totalCount?: number;
 };
 
@@ -44,8 +45,8 @@ describe('SelectedItemsPane', () => {
   let root: ReturnType<typeof createRoot> | null;
 
   const makeItems = (): Item[] => [
-    { id: 'a', name: 'Playlist A', type: 'playlist', coverImage: { url: 'a.png' }, getTrackCount: () => 20 },
-    { id: 'b', name: 'Album B', type: 'album', getTrackCount: () => 12 }
+    { id: 'a', name: 'Playlist A', type: 'playlist', coverImage: { url: 'a.png' }, getTrackCount: () => 20 } as any,
+    { id: 'b', name: 'Album B', type: 'album', getTrackCount: () => 12 } as any
   ];
 
   beforeEach(() => {
@@ -67,7 +68,7 @@ describe('SelectedItemsPane', () => {
       root = createRoot(container);
       root.render(
         createElement(SelectedItemsPane, {
-          items: props.items ?? makeItems(),
+          items: (props.items as TrackContainer<any>[] | undefined) ?? (makeItems() as any),
           setItems,
           onRemoveItem,
           ...props
@@ -87,7 +88,7 @@ describe('SelectedItemsPane', () => {
 
   it('renders items with remove controls and custom controls', async () => {
     const onRemoveItem = vi.fn();
-    const customControl = (item: Item) => createElement('span', { className: 'custom-control' }, `Meta ${item.id}`);
+    const customControl = (item: TrackContainer<any>) => createElement('span', { className: 'custom-control' }, `Meta ${item.id}`);
     await renderPane({ onRemoveItem, renderItemControls: customControl, title: 'Selected Items' });
 
     const tiles = Array.from(container.querySelectorAll('.item-tile')) as HTMLElement[];

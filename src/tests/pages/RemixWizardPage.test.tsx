@@ -9,7 +9,6 @@ import { RemixWizardPage } from '../../pages/RemixWizardPage';
 type PaneContext = { panes: { get: (id: string) => { isVisible: boolean } | null } };
 
 let latestSelectedProps: any = null;
-let latestWizardProps: any = null;
 let latestRemixProps: any = null;
 let latestExportProps: any = null;
 let remixNotified = false;
@@ -17,7 +16,6 @@ let excludedSet = false;
 
 vi.mock('../../components/navigation/Wizard', () => ({
   Wizard: (props: any) => {
-    latestWizardProps = props;
     const ctx: PaneContext = {
       panes: {
         get: (id: string) =>
@@ -114,7 +112,6 @@ describe('RemixWizardPage interactions', () => {
     document.body.appendChild(container);
     root = null;
     latestSelectedProps = null;
-    latestWizardProps = null;
     latestRemixProps = null;
     latestExportProps = null;
     remixNotified = false;

@@ -16,7 +16,7 @@ class MockResizeObserver {
     this.callback = cb;
     latestRO = this;
   }
-  observe(target: Element) {
+  observe(_target: Element) {
     this.callback([{ contentRect: { width: mockWidth } } as ResizeObserverEntry], this as any);
   }
   disconnect() {}

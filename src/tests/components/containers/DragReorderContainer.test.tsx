@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
 import { createElement, createRef, forwardRef, useImperativeHandle, useRef, useState } from 'react';
@@ -256,7 +256,6 @@ describe('DragReorderContainer', () => {
     const items = Array.from(wrapper.querySelectorAll('.drag-item')) as HTMLElement[];
     items.forEach(ensureRect);
     const propsContainer = getProps(wrapper);
-    const propsItems = items.map(getProps);
     const dataTransfer = createDataTransfer();
     dataTransfer.setData('application/json', JSON.stringify({ id: 'a' }));
 

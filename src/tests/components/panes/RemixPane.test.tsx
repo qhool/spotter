@@ -11,6 +11,8 @@ import type { Track } from '@spotify/web-api-ts-sdk';
 class StubTrackContainer extends TrackContainer<Track> {
   id: string;
   name: string;
+  description?: string = '';
+  coverImage?: { url: string } = { url: '' };
   type: 'playlist' = 'playlist';
   constructor(id: string, name: string, private tracks: Track[]) {
     super({} as any);

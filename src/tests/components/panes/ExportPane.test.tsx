@@ -9,7 +9,6 @@ import type { Track } from '@spotify/web-api-ts-sdk';
 
 const controllerCalls: any[] = [];
 const queueCalls: any[] = [];
-const jsonDownloads: string[] = [];
 
 vi.mock('../../../data/ExportController', () => {
   return {
@@ -141,7 +140,7 @@ describe('ExportPane', () => {
         createElement(ExportPane, {
           sdk,
           remixContainer,
-          excludedTrackIds: opts.excluded ?? new Set(),
+          excludedTrackIds: opts.excluded ?? new Set<string>(),
           initialExportType: exportType
         })
       );
@@ -179,8 +178,8 @@ describe('ExportPane', () => {
     await act(async () => Promise.resolve());
 
     expect(controllerCalls.length).toBeGreaterThan(0);
-    const exportedTracks = controllerCalls[0]?.tracks ?? [];
-    expect(exportedTracks.map(t => t.id)).not.toContain('b');
+    const exportedTracks: Track[] = controllerCalls[0]?.tracks ?? [];
+    expect(exportedTracks.map((t: Track) => t.id)).not.toContain('b');
     expect(container.querySelector('.export-progress-overlay')).toBeTruthy();
   });
 
@@ -192,8 +191,8 @@ describe('ExportPane', () => {
   });
 
   it('handles JSON export path and records download', async () => {
-    (global.URL as any).createObjectURL ||= () => 'blob:url';
-    (global.URL as any).revokeObjectURL ||= () => {};
+    (globalThis.URL as any).createObjectURL ||= () => 'blob:url';
+    (globalThis.URL as any).revokeObjectURL ||= () => {};
     const createUrlSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:url');
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     const clickSpy = vi.fn();
@@ -371,7 +370,7 @@ describe('ExportPane', () => {
         createElement(ExportPane, {
           sdk,
           remixContainer: null,
-          excludedTrackIds: new Set()
+          excludedTrackIds: new Set<string>()
         })
       );
     });

@@ -7,22 +7,46 @@ import { PlaylistContainer, AlbumContainer } from '../../../data/TrackContainer'
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-type SDK = ReturnType<typeof makeSdk>;
+const makeAlbum = (id: string, name: string) =>
+  ({
+    album_type: 'album',
+    total_tracks: 10,
+    available_markets: [],
+    external_urls: { spotify: '' },
+    href: '',
+    id,
+    images: [{ url: `https://img/${id}.jpg` }],
+    name,
+    release_date: '2021-01-01',
+    release_date_precision: 'day',
+    type: 'album',
+    uri: '',
+    artists: [{ name: 'Artist', id: 'art', type: 'artist', uri: '', href: '', external_urls: { spotify: '' } }],
+    tracks: { href: '', items: [], limit: 0, next: null, offset: 0, previous: null, total: 0 },
+    copyrights: [],
+    external_ids: {},
+    genres: [],
+    label: '',
+    popularity: 0
+  } as any);
 
-const makeAlbum = (id: string, name: string) => ({
-  id,
-  name,
-  release_date: '2021-01-01',
-  images: [{ url: `https://img/${id}.jpg` }],
-  artists: [{ name: 'Artist' }]
-});
-
-const makePlaylist = (id: string, name: string) => ({
-  id,
-  name,
-  description: '',
-  images: [{ url: `https://img/${id}.jpg` }]
-});
+const makePlaylist = (id: string, name: string) =>
+  ({
+    id,
+    name,
+    description: '',
+    images: [{ url: `https://img/${id}.jpg` }],
+    tracks: { href: '', items: [], limit: 0, next: null, offset: 0, previous: null, total: 1 },
+    collaborative: false,
+    external_urls: { spotify: '' },
+    followers: { href: null, total: 0 },
+    href: '',
+    owner: { display_name: 'owner', id: 'user', type: 'user', uri: '', href: '', external_urls: { spotify: '' } },
+    public: true,
+    snapshot_id: '',
+    type: 'playlist',
+    uri: ''
+  } as any);
 
 const makeSdk = () => {
   const playlistItems = [
@@ -89,13 +113,13 @@ const makeSdk = () => {
     })
   };
 
-  return sdk as SDK;
+  return sdk;
 };
 
 describe('SearchPane', () => {
   let container: HTMLDivElement;
   let root: ReturnType<typeof createRoot> | null;
-  let sdk: SDK;
+  let sdk: any;
 
   beforeEach(() => {
     container = document.createElement('div');
@@ -251,7 +275,7 @@ describe('SearchPane', () => {
   });
 
   it('loads more search results when next page exists', async () => {
-    sdk.search = vi.fn(async (query: string, types: string[], _market: string, _limit: number, offset: number) => {
+    sdk.search = vi.fn(async (query: string, _types: string[], _market: string, _limit: number, offset: number) => {
       return {
         playlists: {
           items: [makePlaylist(`${query}-${offset}`, `Found ${query}-${offset}`)],

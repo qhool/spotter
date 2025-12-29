@@ -62,7 +62,7 @@ describe('TrackListPane', () => {
       root.render(
         createElement(TrackListPane, {
           remixContainer: null as any,
-          excludedTrackIds: new Set(),
+          excludedTrackIds: new Set<string>(),
           setExcludedTrackIds: () => {}
         })
       );
@@ -75,7 +75,7 @@ describe('TrackListPane', () => {
     const remix = makeRemix(tracks);
 
     const Harness = () => {
-      const [excluded, setExcluded] = useState<Set<string>>(new Set());
+      const [excluded, setExcluded] = useState<Set<string>>(new Set<string>());
       return createElement(TrackListPane, {
         remixContainer: remix as any,
         excludedTrackIds: excluded,
@@ -112,7 +112,7 @@ describe('TrackListPane', () => {
       root.render(
         createElement(TrackListPane, {
           remixContainer: remix as any,
-          excludedTrackIds: new Set(),
+          excludedTrackIds: new Set<string>(),
           setExcludedTrackIds: () => {}
         })
       );

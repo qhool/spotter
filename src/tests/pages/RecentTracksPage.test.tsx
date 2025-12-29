@@ -59,7 +59,8 @@ describe('RecentTracksPage', () => {
     const date = new Date('2023-01-01T12:34:00Z');
     const state = {
       value: { container: { getLastUpdated: () => date } as any, trackCount: 5 },
-      lastUpdated: date
+      lastUpdated: date,
+      updated: true
     };
     const { navSlot } = await renderPage({
       navSlot: document.createElement('div'),
@@ -75,15 +76,13 @@ describe('RecentTracksPage', () => {
   });
 
   it('triggers refresh and prevents double clicks while refreshing', async () => {
-    let resolveSync: (() => void) | null = null;
-    const triggerSync = vi.fn(
-      () =>
-        new Promise<void>(resolve => {
-          resolveSync = resolve;
-        })
-    );
+    let resolveSync: () => void = () => {};
+    const syncPromise = new Promise<void>(resolve => {
+      resolveSync = () => resolve();
+    });
+    const triggerSync = vi.fn(() => syncPromise);
     await renderPage({
-      recentTracksState: { value: { container: { getLastUpdated: () => null } }, lastUpdated: null } as any,
+      recentTracksState: { value: { container: { getLastUpdated: () => null } }, lastUpdated: null, updated: true } as any,
       recentTracksSyncReady: true,
       syncController: { triggerSync } as any
     });
@@ -95,13 +94,13 @@ describe('RecentTracksPage', () => {
     await act(async () => refreshBtn.click());
     expect(triggerSync).toHaveBeenCalledTimes(1);
 
-    resolveSync?.();
+    resolveSync();
     await act(async () => Promise.resolve());
   });
 
   it('track list supports scrolling when content overflows', async () => {
     await renderPage({
-      recentTracksState: { value: { container: { getLastUpdated: () => null } }, lastUpdated: null } as any,
+      recentTracksState: { value: { container: { getLastUpdated: () => null } }, lastUpdated: null, updated: true } as any,
       recentTracksSyncReady: true,
       syncController: { triggerSync: vi.fn() } as any
     });
