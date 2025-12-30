@@ -79,21 +79,19 @@ describe('SelectedItemsPane', () => {
     return { setItems, onRemoveItem };
   };
 
-  it('renders empty state with title and no count when no items', async () => {
-    await renderPane({ items: [], title: 'Selected' });
-    expect(container.textContent).toContain('Selected');
-    expect(container.querySelector('.selected-items-pane__count')).toBeNull();
+  it('renders empty state when no items', async () => {
+    await renderPane({ items: [] });
     expect(container.querySelector('.selected-items-pane__empty')?.textContent).toContain('No items selected');
   });
 
   it('renders items with remove controls and custom controls', async () => {
     const onRemoveItem = vi.fn();
-    const customControl = (item: TrackContainer<any>) => createElement('span', { className: 'custom-control' }, `Meta ${item.id}`);
-    await renderPane({ onRemoveItem, renderItemControls: customControl, title: 'Selected Items' });
+    const customControl = (item: TrackContainer<any>) =>
+      createElement('span', { className: 'custom-control' }, `Meta ${item.id}`);
+    await renderPane({ onRemoveItem, renderItemControls: customControl });
 
     const tiles = Array.from(container.querySelectorAll('.item-tile')) as HTMLElement[];
     expect(tiles.length).toBe(2);
-    expect(container.querySelector('.selected-items-pane__count')?.textContent).toBe('32 Tracks');
     expect(container.querySelectorAll('.custom-control').length).toBeGreaterThan(0);
 
     const removeButtons = Array.from(container.querySelectorAll('.remove-button')) as HTMLButtonElement[];
@@ -130,14 +128,17 @@ describe('SelectedItemsPane', () => {
     expect(listWrapper.scrollHeight).toBeGreaterThan(listWrapper.clientHeight);
   });
 
-  it('sums track counts across items using getTrackCount or totalCount', async () => {
-    const items: any[] = [
-      { id: 'pl', name: 'Playlist', type: 'playlist', getTrackCount: () => 15 },
-      { id: 'al', name: 'Album', type: 'album', totalCount: 8 },
-      { id: 'ls', name: 'Liked', type: 'playlist' } // no count -> treated as 0
-    ];
-
-    await renderPane({ items, title: 'Selected Items' });
-    expect(container.querySelector('.selected-items-pane__count')?.textContent).toBe('23 Tracks');
+  it('renders header controls when provided', async () => {
+    const headerControl = createElement(
+      'div',
+      { className: 'header-control remix-controls' },
+      createElement('div', { className: 'track-list-pane__method-group' }, 'Method'),
+      createElement('button', { className: 'track-list-pane__refresh-button' }, 'Refresh')
+    );
+    await renderPane({ headerControls: headerControl });
+    expect(container.querySelector('.header-control')).toBeTruthy();
+    const method = container.querySelector('.track-list-pane__method-group');
+    const refresh = container.querySelector('.track-list-pane__refresh-button');
+    expect(method && refresh && method.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

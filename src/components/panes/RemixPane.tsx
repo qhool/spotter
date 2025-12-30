@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SpotifyApi } from '@spotify/web-api-ts-sdk';
-import { RefreshCircleSolid } from 'iconoir-react';
 import { TrackListPane } from './TrackListPane';
 import { TrackContainer, RemixContainer } from '../../data/TrackContainer';
 import { RemixMethod, RemixOptions, getRemixFunction } from '../../data/RemixFunctions';
+import { RemixControls } from '../widgets/RemixControls';
 
 interface RemixPaneProps {
   sdk: SpotifyApi;
@@ -13,6 +13,12 @@ interface RemixPaneProps {
   onRemixContainerChange?: (container: RemixContainer<RemixOptions> | null) => void;
   itemOptionsById?: Partial<Record<string, RemixOptions>>;
   className?: string;
+  refreshTrigger: number;
+  onRefresh: () => void | Promise<void>;
+  trackCount: number;
+  showControls?: boolean;
+  remixMethod: RemixMethod;
+  setRemixMethod: (method: RemixMethod) => void;
 }
 
 const REMIX_METHOD_OPTIONS: RemixMethod[] = ['shuffle', 'concatenate'];
@@ -24,25 +30,31 @@ export function RemixPane({
   setExcludedTrackIds,
   onRemixContainerChange,
   itemOptionsById = {} as Partial<Record<string, RemixOptions>>,
-  className
+  className,
+  refreshTrigger,
+  onRefresh,
+  trackCount,
+  showControls = true,
+  remixMethod,
+  setRemixMethod
 }: RemixPaneProps) {
-  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
-  const [refreshCounter, setRefreshCounter] = useState(0);
+  const selectedTrackCount = useMemo(
+    () =>
+      selectedItems.reduce((sum, item) => {
+        const count =
+          typeof (item as any).getTrackCount === 'function'
+            ? (item as any).getTrackCount()
+            : (item as any).totalCount;
+        return sum + (typeof count === 'number' && isFinite(count) ? count : 0);
+      }, 0),
+    [selectedItems]
+  );
 
-  const hasRemix = useMemo(() => Boolean(remixContainer), [remixContainer]);
-
-  const handleMethodChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    setRemixMethod(event.target.value as RemixMethod);
-  }, []);
-
-  const handleRefresh = useCallback(async () => {
-    if (!remixContainer) {
-      return;
-    }
-    await remixContainer.clearRemixCache();
-    setRefreshCounter(prev => prev + 1);
-  }, [remixContainer]);
+  const remixTrackCount = remixContainer?.getTrackCount?.();
+  const trackCountLabel = `${
+    typeof remixTrackCount === 'number' && isFinite(remixTrackCount) ? remixTrackCount : trackCount ?? selectedTrackCount
+  } Tracks`;
 
   useEffect(() => {
     if (selectedItems.length === 0) {
@@ -69,35 +81,19 @@ export function RemixPane({
 
   const controls = (
     <>
-      <div className="track-list-pane__method-group">
-        <label htmlFor="remix-method" className="control-label">
-          Remix Method
-        </label>
-        <select
-          id="remix-method"
-          className="control-select"
-          value={remixMethod}
-          onChange={handleMethodChange}
-        >
-          {REMIX_METHOD_OPTIONS.map(option => (
-            <option key={option} value={option}>
-              {option === 'shuffle' ? 'Shuffle' : 'Concatenate'}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {hasRemix && (
-        <button
-          type="button"
-          className="track-list-pane__refresh-button"
-          onClick={handleRefresh}
-          title="Refresh remix"
-        >
-          <RefreshCircleSolid className="refresh-icon" />
-          Refresh
-        </button>
-      )}
+      <RemixControls
+        trackCount={
+          typeof remixTrackCount === 'number' && isFinite(remixTrackCount) ? remixTrackCount : trackCount ?? selectedTrackCount
+        }
+        label={trackCountLabel}
+        remixMethod={remixMethod}
+        methodOptions={REMIX_METHOD_OPTIONS}
+        onMethodChange={value => setRemixMethod(value as RemixMethod)}
+        onRefresh={onRefresh}
+        buttonClassName="track-list-pane__refresh-button"
+        hidden={!showControls}
+        disabled={!remixContainer}
+      />
     </>
   );
 
@@ -106,7 +102,7 @@ export function RemixPane({
       remixContainer={remixContainer}
       excludedTrackIds={excludedTrackIds}
       setExcludedTrackIds={setExcludedTrackIds}
-      refreshTrigger={refreshCounter}
+      refreshTrigger={refreshTrigger}
       controls={controls}
       className={className}
     />

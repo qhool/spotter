@@ -177,6 +177,20 @@ export function Wizard<TMeta = unknown>({
   }, [paneCount]);
 
   useEffect(() => {
+    if (paneCount === 0) {
+      return;
+    }
+    const windowEnd = activeWindowStart + windowSize - 1;
+    setPaneVisibility(prev => {
+      const next = panes.map((_, idx) => idx >= activeWindowStart && idx <= windowEnd);
+      if (prev.length === next.length && prev.every((val, idx) => val === next[idx])) {
+        return prev;
+      }
+      return next;
+    });
+  }, [activeWindowStart, windowSize, paneCount, panes]);
+
+  useEffect(() => {
     setWindowSize(prev => (availableSizes.includes(prev) ? prev : availableSizes[0] ?? 1));
   }, [availableSizes]);
 
@@ -290,6 +304,10 @@ export function Wizard<TMeta = unknown>({
               return;
             }
 
+            const inActiveWindow = paneIndex >= activeWindowStart && paneIndex < activeWindowStart + windowSize;
+            if (!inActiveWindow) {
+              return;
+            }
             const isIntersecting = entry.isIntersecting && entry.intersectionRatio > 0;
             if (next[paneIndex] !== isIntersecting) {
               next[paneIndex] = isIntersecting;
@@ -313,7 +331,7 @@ export function Wizard<TMeta = unknown>({
     });
 
     return () => observer.disconnect();
-  }, [paneSignature, trackNode]);
+  }, [paneSignature, trackNode, activeWindowStart, windowSize]);
 
   const paneHandles = useMemo<ArrayMap<WizardPaneHandle<TMeta>>>(() => {
     const windowEnd = activeWindowStart + windowSize - 1;

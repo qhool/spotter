@@ -59,10 +59,11 @@ describe('RemixPane', () => {
 
   const render = async (
     selectedItems: TrackContainer<any>[],
-    opts: { onChange?: (c: any) => void; optionsById?: Record<string, any> } = {}
+    opts: { onChange?: (c: any) => void; optionsById?: Record<string, any>; onRefresh?: () => void } = {}
   ) => {
     const onChange = opts.onChange ?? vi.fn();
     const optionsById = opts.optionsById ?? {};
+    const onRefresh = opts.onRefresh ?? vi.fn();
     await act(async () => {
       root = createRoot(container);
       root.render(
@@ -72,11 +73,18 @@ describe('RemixPane', () => {
           excludedTrackIds: new Set<string>(),
           setExcludedTrackIds: () => {},
           onRemixContainerChange: onChange,
-          itemOptionsById: optionsById
+          itemOptionsById: optionsById,
+          refreshTrigger: 0,
+          onRefresh,
+          trackCount: selectedItems.length,
+          showControls: true,
+          remixMethod: 'shuffle',
+          setRemixMethod: () => {}
         })
       );
     });
     await act(async () => Promise.resolve());
+    return { onRefresh, onChange };
   };
 
   it('renders empty state when no selections exist', async () => {
@@ -96,8 +104,8 @@ describe('RemixPane', () => {
   it('refreshes remix and exposes scrollable list area', async () => {
     const tracks = Array.from({ length: 12 }, (_, i) => makeTrack(`id-${i}`, `Track ${i}`));
     const stub = new StubTrackContainer('many', 'Many', tracks);
-    const onChange = vi.fn();
-    await render([stub], { onChange, optionsById: { many: {} } });
+    const onRefresh = vi.fn();
+    await render([stub], { onRefresh, optionsById: { many: {} } });
 
     const refreshBtn = container.querySelector('.track-list-pane__refresh-button') as HTMLButtonElement;
     expect(refreshBtn).toBeTruthy();
@@ -105,8 +113,7 @@ describe('RemixPane', () => {
     await act(async () => {
       refreshBtn.click();
     });
-    // render triggers another container creation; ensure callback fired
-    expect(onChange).toHaveBeenCalled();
+    expect(onRefresh).toHaveBeenCalled();
 
     const list = container.querySelector('.track-list') as HTMLElement;
     expect(list).toBeTruthy();

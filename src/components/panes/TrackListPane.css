@@ -13,11 +13,37 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #333;
+  padding: 0;
+  background: transparent;
+  border-bottom: none;
   flex-shrink: 0;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.remix-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0;
+  max-height: 56px;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+  opacity: 1;
+}
+
+.remix-controls .track-list-pane__method-group {
+  margin-right: auto;
+}
+
+.remix-controls.is-hidden {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
+  margin-top: -0.25rem;
 }
 
 .track-list-pane__method-group {
@@ -42,26 +68,30 @@
 }
 
 .track-list-pane__refresh-button {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 0.375rem;
-  color: #ffffff;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.7rem;
+  min-width: 40px;
+  border-radius: 999px;
+  background-color: rgba(29, 185, 84, 0.18);
+  border: 1px solid rgba(29, 185, 84, 0.4);
+  color: #1db954;
+  font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
 }
 
 .track-list-pane__refresh-button:hover {
-  background-color: #3a3a3a;
-  border-color: #666;
+  background-color: rgba(29, 185, 84, 0.28);
+  border-color: rgba(29, 185, 84, 0.6);
 }
 
 .track-list-pane__refresh-button:active {
-  background-color: #1a1a1a;
+  background-color: rgba(29, 185, 84, 0.35);
+  transform: translateY(1px);
 }
 
 .track-list-pane__refresh-button .refresh-icon {

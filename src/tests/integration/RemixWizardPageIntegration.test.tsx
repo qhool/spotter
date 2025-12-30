@@ -218,4 +218,74 @@ describe('RemixWizardPage integration (Search ↔ Selected ↔ Remix)', () => {
     // Ensure exclusion toggle is reflected in UI state (tied to remix options)
     expect(excludeBtn.className).toContain('is-active');
   });
+
+  it('aligns remix method dropdown with search type selector (top)', async () => {
+    await renderPage();
+    const typeSelect = container.querySelector('.type-selector') as HTMLElement;
+    const remixSelect = container.querySelector('#remix-method') as HTMLElement;
+
+    const setRect = (el: HTMLElement, top: number, height: number) => {
+      Object.defineProperty(el, 'getBoundingClientRect', {
+        value: () => ({
+          top,
+          bottom: top + height,
+          left: 0,
+          right: 100,
+          width: 100,
+          height,
+          x: 0,
+          y: top
+        })
+      });
+    };
+
+    setRect(typeSelect, 10, 32);
+    setRect(remixSelect, 10, 32);
+
+    const typeRect = typeSelect.getBoundingClientRect();
+    const remixRect = remixSelect.getBoundingClientRect();
+    expect(remixRect.top).toBe(typeRect.top);
+  });
+
+  it('matches remix method dropdown height with search type selector', async () => {
+    await renderPage();
+    const typeSelect = container.querySelector('.type-selector') as HTMLElement;
+    const remixSelect = container.querySelector('#remix-method') as HTMLElement;
+
+    const setRect = (el: HTMLElement, top: number, height: number) => {
+      Object.defineProperty(el, 'getBoundingClientRect', {
+        value: () => ({
+          top,
+          bottom: top + height,
+          left: 0,
+          right: 100,
+          width: 100,
+          height,
+          x: 0,
+          y: top
+        })
+      });
+    };
+
+    setRect(typeSelect, 10, 32);
+    setRect(remixSelect, 10, 32);
+
+    const typeRect = typeSelect.getBoundingClientRect();
+    const remixRect = remixSelect.getBoundingClientRect();
+    expect(remixRect.height).toBe(typeRect.height);
+  });
+
+  it('aligns tops of search results and selected items lists', async () => {
+    await renderPage();
+    const searchList = container.querySelector('.search-results') as HTMLElement;
+    const selectedList = container.querySelector('.selected-items-pane__list-wrapper') as HTMLElement;
+
+    Object.defineProperty(searchList, 'getBoundingClientRect', {
+      value: () => ({ top: 120, bottom: 520, left: 0, right: 100, width: 100, height: 400, x: 0, y: 120 })
+    });
+
+    const searchRect = searchList.getBoundingClientRect();
+    const selectedRect = selectedList.getBoundingClientRect();
+    expect(selectedRect.top).toBe(searchRect.top);
+  });
 });

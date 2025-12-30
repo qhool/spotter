@@ -7,8 +7,9 @@ import { SearchPane } from '../components/panes/SearchPane';
 import { TrackContainer, RemixContainer, RecentTracksContainer } from '../data/TrackContainer';
 import { SelectedItemsPane } from '../components/panes/SelectedItemsPane';
 import { RemixPane } from '../components/panes/RemixPane';
-import { RemixOptions } from '../data/RemixFunctions';
+import { RemixMethod, RemixOptions } from '../data/RemixFunctions';
 import { ExportPane } from '../components/panes/ExportPane';
+import { RemixControls } from '../components/widgets/RemixControls';
 import './RemixWizardPage.css';
 
 interface RemixWizardPageProps {
@@ -23,6 +24,8 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
   const [remixContainer, setRemixContainer] = useState<RemixContainer<RemixOptions> | null>(null);
   const [excludedTrackIds, setExcludedTrackIds] = useState<Set<string>>(() => new Set());
   const [itemOptionsById, setItemOptionsById] = useState<Partial<Record<string, RemixOptions>>>({});
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [remixMethod, setRemixMethod] = useState<RemixMethod>('shuffle');
 
   const handleRemixContainerChange = useCallback(
     (container: RemixContainer<RemixOptions> | null) => {
@@ -125,6 +128,43 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
     []
   );
 
+  const selectedTrackCount = useMemo(
+    () =>
+      selectedItems.reduce((sum, item) => {
+        const count =
+          typeof (item as any).getTrackCount === 'function'
+            ? (item as any).getTrackCount()
+            : (item as any).totalCount;
+        return sum + (typeof count === 'number' && isFinite(count) ? count : 0);
+      }, 0),
+    [selectedItems]
+  );
+
+  const remixTrackCount = remixContainer?.getTrackCount?.();
+  const remixCount = typeof remixTrackCount === 'number' && isFinite(remixTrackCount) ? remixTrackCount : selectedTrackCount;
+
+  const handleRefreshRemix = useCallback(async () => {
+    if (remixContainer) {
+      await remixContainer.clearRemixCache();
+    }
+    setRefreshCounter(prev => prev + 1);
+  }, [remixContainer]);
+
+  const remixControls = useMemo(
+    () => (
+      <RemixControls
+        trackCount={remixCount}
+        onRefresh={handleRefreshRemix}
+        buttonClassName="track-list-pane__refresh-button"
+        disabled={!remixContainer}
+        remixMethod={remixMethod}
+        methodOptions={['shuffle', 'concatenate']}
+        onMethodChange={value => setRemixMethod(value as RemixMethod)}
+      />
+    ),
+    [handleRefreshRemix, remixContainer, remixCount, remixMethod]
+  );
+
   const wizardPanes = useMemo<WizardPane[]>(
     () => [
       {
@@ -142,22 +182,25 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
       {
         id: 'selected-items',
         title: 'Selected Items',
-        render: ({ panes }) => (
-          <SelectedItemsPane
-            items={selectedItems}
-            setItems={setSelectedItems}
-            onRemoveItem={handleRemoveSelectedItem}
-            title="Selected Items"
-            emptyMessage="Add playlists or albums from the search results"
-            disableDragToDelete={!panes.get('search')?.isVisible}
-            renderItemControls={renderItemControls}
-          />
-        )
+        render: ({ panes }) => {
+          const remixVisible = panes.get('track-list')?.isVisible ?? false;
+          return (
+            <SelectedItemsPane
+              items={selectedItems}
+              setItems={setSelectedItems}
+              onRemoveItem={handleRemoveSelectedItem}
+              emptyMessage="Add playlists or albums from the search results"
+              disableDragToDelete={!panes.get('search')?.isVisible}
+              renderItemControls={renderItemControls}
+              headerControls={!remixVisible ? remixControls : null}
+            />
+          );
+        }
       },
       {
         id: 'track-list',
         title: 'Track List',
-        render: () => (
+        render: ({ panes }) => (
           <RemixPane
             sdk={sdk}
             selectedItems={selectedItems}
@@ -165,6 +208,12 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
             setExcludedTrackIds={setExcludedTrackIds}
             onRemixContainerChange={handleRemixContainerChange}
             itemOptionsById={itemOptionsById}
+            refreshTrigger={refreshCounter}
+            onRefresh={handleRefreshRemix}
+            trackCount={remixCount}
+            showControls={panes.get('track-list')?.isVisible ?? false}
+            remixMethod={remixMethod}
+            setRemixMethod={setRemixMethod}
           />
         )
       },
@@ -200,7 +249,13 @@ export function RemixWizardPage({ sdk, navSlot, recentTracksContainer }: RemixWi
       remixContainer,
       recentTracksContainer,
       renderItemControls,
-      itemOptionsById
+      itemOptionsById,
+      refreshCounter,
+      handleRefreshRemix,
+      remixCount,
+      remixControls,
+      remixMethod,
+      setRemixMethod
     ]
   );
 
