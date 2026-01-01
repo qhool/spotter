@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useLayoutEffect, useRef } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { TrackContainer } from '../../data/TrackContainer';
 import { ItemTile, ContentType } from '../tiles/ItemTile';
 import { TrashSolid } from 'iconoir-react';
@@ -33,24 +33,6 @@ export function SelectedItemsPane({
   if (className) {
     classes.push(className);
   }
-
-  const listWrapperRef = useRef<HTMLDivElement | null>(null);
-
-  useLayoutEffect(() => {
-    const isJsdom = typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || '');
-    if (!isJsdom) {
-      return;
-    }
-    const listWrapper = listWrapperRef.current;
-    const searchResults = document.querySelector('.search-results') as HTMLElement | null;
-    if (!listWrapper || !searchResults || typeof searchResults.getBoundingClientRect !== 'function') {
-      return;
-    }
-    Object.defineProperty(listWrapper, 'getBoundingClientRect', {
-      configurable: true,
-      value: () => searchResults.getBoundingClientRect()
-    });
-  }, []);
 
   const getItemId = useCallback((item: TrackContainer<any>) => item.id, []);
 
@@ -89,7 +71,7 @@ export function SelectedItemsPane({
             </div>
 
             <div className="selected-items-pane__body">
-              <div className="playlist-container selected-items-pane__list-wrapper" ref={listWrapperRef}>
+              <div className="playlist-container selected-items-pane__list-wrapper">
                 {items.length === 0 ? (
                   <div className="selected-items-pane__empty">{emptyMessage}</div>
                 ) : (

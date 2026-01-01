@@ -9,6 +9,12 @@ type SearchHandler = (
   offset?: number
 ) => any;
 
+type SearchSelection = {
+  playlists?: number | string[] | null;
+  albums?: number | string[] | null;
+  tracks?: number | string[] | null;
+};
+
 /**
  * Unified mock Spotify SDK with spy-able search and playlist helpers.
  */
@@ -24,15 +30,18 @@ export class MockSpotifySdk {
   private likedTracks: SavedTrack[] = [];
   private queueItems: Track[] = [];
   private availableDevices: { id: string; name: string }[] = [];
+  private userPlaylists: any[] = [];
+  private savedAlbums: any[] = [];
+  private searchPlaylists: any[] = [];
+  private searchAlbums: any[] = [];
+  private searchTracks: any[] = [];
+  private searchSelector?: (query: string, types: string[], market?: string, limit?: number, offset?: number) => SearchSelection;
+  private searchPostFilter?: (result: any) => any;
+  private failMap: Map<string, string> = new Map();
 
   constructor(searchHandler?: SearchHandler, options?: { recentLimit?: number }) {
-    this.search = vi.fn(
-      searchHandler ??
-        (() =>
-          Promise.resolve({
-            tracks: { items: [] }
-          }))
-    );
+    this.seedDefaults();
+    this.search = vi.fn(searchHandler ? async (...args: any[]) => searchHandler(...args) : this.defaultSearch);
     this.recentLimit = options?.recentLimit ?? 100;
   }
 
@@ -43,11 +52,46 @@ export class MockSpotifySdk {
     profile: async () => ({ id: 'test-user-id' }),
     tracks: {
       savedTracks: vi.fn(async (limit: number = 50, offset: number = 0) => {
+        if (this.failMap.has('currentUser.tracks')) {
+          throw new Error(this.failMap.get('currentUser.tracks') as string);
+        }
         const clampedLimit = Math.min(Math.max(limit, 1), 50);
         const items = this.likedTracks.slice(offset, offset + clampedLimit);
         return {
           items,
           total: this.likedTracks.length
+        };
+      })
+    },
+    playlists: {
+      playlists: vi.fn(async (limit: number = 50, offset: number = 0) => {
+        if (this.failMap.has('currentUser.playlists')) {
+          throw new Error(this.failMap.get('currentUser.playlists') as string);
+        }
+        const clampedLimit = Math.min(Math.max(limit, 1), 50);
+        const next = offset + clampedLimit < this.userPlaylists.length ? offset + clampedLimit : null;
+        return {
+          items: this.userPlaylists.slice(offset, offset + clampedLimit),
+          total: this.userPlaylists.length,
+          limit: clampedLimit,
+          offset,
+          next
+        };
+      })
+    },
+    albums: {
+      savedAlbums: vi.fn(async (limit: number = 50, offset: number = 0) => {
+        if (this.failMap.has('currentUser.albums')) {
+          throw new Error(this.failMap.get('currentUser.albums') as string);
+        }
+        const clampedLimit = Math.min(Math.max(limit, 1), 50);
+        const next = offset + clampedLimit < this.savedAlbums.length ? offset + clampedLimit : null;
+        return {
+          items: this.savedAlbums.slice(offset, offset + clampedLimit),
+          total: this.savedAlbums.length,
+          limit: clampedLimit,
+          offset,
+          next
         };
       })
     }
@@ -65,6 +109,9 @@ export class MockSpotifySdk {
     },
 
     getPlaylistItems: vi.fn(async (_playlistId: string, _market?: string, _fields?: any, limit: number = 50, offset: number = 0) => {
+      if (this.failMap.has('playlists.getPlaylistItems')) {
+        throw new Error(this.failMap.get('playlists.getPlaylistItems') as string);
+      }
       const clampedLimit = Math.min(Math.max(limit, 1), 50);
       const items = this.playlistTracks.slice(offset, offset + clampedLimit).map(track => ({ track }));
       return {
@@ -75,6 +122,9 @@ export class MockSpotifySdk {
 
     addItemsToPlaylist: async (_playlistId: string, trackUris: string[]) => {
       // Check for failure before adding
+      if (this.failMap.has('playlists.addItemsToPlaylist')) {
+        throw new Error(this.failMap.get('playlists.addItemsToPlaylist') as string);
+      }
       if (this.failurePoints.length > 0 && this.tracksAddedCount >= this.failurePoints[0]) {
         this.failurePoints.shift();
         throw new Error(this.failureMessage);
@@ -123,6 +173,9 @@ export class MockSpotifySdk {
       devices: this.availableDevices.map(d => ({ id: d.id, name: d.name }))
     }),
     getRecentlyPlayedTracks: async (limit: number = 50, _range?: { type: 'before'; timestamp: string }) => {
+      if (this.failMap.has('player.getRecentlyPlayedTracks')) {
+        throw new Error(this.failMap.get('player.getRecentlyPlayedTracks') as string);
+      }
       const safeLimit = Math.min(Math.max(limit, 1), this.recentLimit);
       const items = this.recentTracks.slice(0, safeLimit);
       const before = items.length < this.recentTracks.length ? items[items.length - 1]?.played_at ?? null : null;
@@ -185,6 +238,10 @@ export class MockSpotifySdk {
     this.likedTracks = [];
     this.queueItems = [];
     this.availableDevices = [];
+    this.failMap.clear();
+    this.searchSelector = undefined;
+    this.searchPostFilter = undefined;
+    this.seedDefaults();
     if (this.search.mockReset) {
       this.search.mockReset();
     }
@@ -208,4 +265,154 @@ export class MockSpotifySdk {
     this.playlistTracks = [...tracks];
     this.tracksAddedCount = tracks.length;
   }
+
+  setUserPlaylists(playlists: any[]): void {
+    this.userPlaylists = [...playlists];
+  }
+
+  setSavedAlbums(albums: any[]): void {
+    this.savedAlbums = [...albums];
+  }
+
+  setSearchPlaylists(items: any[]): void {
+    this.searchPlaylists = [...items];
+  }
+
+  setSearchAlbums(items: any[]): void {
+    this.searchAlbums = [...items];
+  }
+
+  setSearchTracks(items: any[]): void {
+    this.searchTracks = [...items];
+  }
+
+  setSearchSelector(selector: (query: string, types: string[], market?: string, limit?: number, offset?: number) => SearchSelection): void {
+    this.searchSelector = selector;
+    this.search = vi.fn(this.defaultSearch);
+  }
+
+  setSearchPostFilter(filter: (result: any) => any): void {
+    this.searchPostFilter = filter;
+  }
+
+  failOn(operation: string, message: string = 'Forced mock failure'): void {
+    this.failMap.set(operation, message);
+  }
+
+  clearFailures(): void {
+    this.failMap.clear();
+  }
+
+  getUserPlaylistsSnapshot(): any[] {
+    return [...this.userPlaylists];
+  }
+
+  getSavedAlbumsSnapshot(): any[] {
+    return [...this.savedAlbums];
+  }
+
+  getSearchPlaylistsSnapshot(): any[] {
+    return [...this.searchPlaylists];
+  }
+
+  getSearchAlbumsSnapshot(): any[] {
+    return [...this.searchAlbums];
+  }
+
+  getSearchTracksSnapshot(): any[] {
+    return [...this.searchTracks];
+  }
+
+  private seedDefaults(): void {
+    this.userPlaylists = Array.from({ length: 12 }, (_, i) => ({
+      id: `pl-${i + 1}`,
+      name: `Playlist ${i + 1}`,
+      description: `Desc ${i + 1}`,
+      images: [],
+      owner: { display_name: 'user' },
+      tracks: { total: 15 + i },
+      type: 'playlist'
+    }));
+    this.savedAlbums = Array.from({ length: 8 }, (_, i) => ({
+      added_at: new Date().toISOString(),
+      album: {
+        id: `album-${i + 1}`,
+        name: `Album ${i + 1}`,
+        release_date: '2020-01-01',
+        images: [],
+        artists: [{ name: 'Artist' }],
+        type: 'album'
+      }
+    }));
+    this.searchPlaylists = Array.from({ length: 25 }, (_, i) => ({
+      id: `spl-${i + 1}`,
+      name: `Search Playlist ${i + 1}`,
+      description: '',
+      images: [],
+      owner: { display_name: 'searcher' },
+      tracks: { total: 20 + i },
+      type: 'playlist'
+    }));
+    this.searchAlbums = Array.from({ length: 18 }, (_, i) => ({
+      id: `sal-${i + 1}`,
+      name: `Album search ${i + 1}`,
+      release_date: '2020-01-01',
+      images: [],
+      artists: [{ name: 'Artist' }],
+      type: 'album'
+    }));
+    this.searchTracks = Array.from({ length: 30 }, (_, i) => ({
+      id: `st-${i + 1}`,
+      name: `Search Track ${i + 1}`,
+      artists: [{ name: 'Artist' }],
+      album: { name: 'Album' },
+      type: 'track'
+    }));
+  }
+
+  private defaultSearch = async (
+    _query: string,
+    types: string[],
+    _market: string = 'US',
+    limit: number = 20,
+    offset: number = 0
+  ) => {
+    if (this.failMap.has('search')) {
+      throw new Error(this.failMap.get('search') as string);
+    }
+    const selection = this.searchSelector?.(_query, types, _market, limit, offset);
+    const clampedLimit = Math.min(Math.max(limit, 1), 50);
+    const slice = (items: any[]) => ({
+      items: items.slice(offset, offset + clampedLimit),
+      total: items.length,
+      limit: clampedLimit,
+      offset,
+      next: offset + clampedLimit < items.length ? offset + clampedLimit : null
+    });
+
+    const pick = (items: any[], sel?: number | string[] | null) => {
+      if (sel == null) {
+        return slice(items);
+      }
+      if (typeof sel === 'number') {
+        return slice(items.slice(0, sel));
+      }
+      const mapped = sel
+        .map(id => items.find(it => it.id === id))
+        .filter(Boolean);
+      return slice(mapped as any[]);
+    };
+
+    const result: any = {};
+    if (types.includes('playlist')) {
+      result.playlists = pick(this.searchPlaylists, selection?.playlists ?? null);
+    }
+    if (types.includes('album')) {
+      result.albums = pick(this.searchAlbums, selection?.albums ?? null);
+    }
+    if (types.includes('track')) {
+      result.tracks = pick(this.searchTracks, selection?.tracks ?? null);
+    }
+    return this.searchPostFilter ? this.searchPostFilter(result) : result;
+  };
 }

@@ -76,11 +76,8 @@ describe('TrackContainer Local Track Integration', () => {
     
     // Mock SDK with search that returns the resolved track
     const mockSdk = new MockSpotifySdk();
-    mockSdk.search.mockResolvedValue({
-      tracks: {
-        items: [resolvedTrack]
-      }
-    });
+    mockSdk.setSearchTracks([resolvedTrack]);
+    mockSdk.setSearchSelector(() => ({ tracks: ['resolved1'] }));
     
     const container = new MockTrackContainer(mockSdk, [localTrack, regularTrack]);
     const result = await container.getTracks(10, 0);
@@ -105,13 +102,9 @@ describe('TrackContainer Local Track Integration', () => {
     const localTrack = createMockTrack('local1', 'Unknown Song', true, 'spotify:local:Unknown+Artist:Unknown+Album:Unknown+Song:180');
     
     // Mock SDK with search that returns no results
-    const mockSdk = new MockSpotifySdk(() =>
-      Promise.resolve({
-        tracks: {
-          items: []
-        }
-      })
-    );
+    const mockSdk = new MockSpotifySdk();
+    mockSdk.setSearchTracks([]);
+    mockSdk.setSearchSelector(() => ({ tracks: [] }));
     
     const container = new MockTrackContainer(mockSdk, [localTrack]);
     const result = await container.getTracks(10, 0);
@@ -128,11 +121,8 @@ describe('TrackContainer Local Track Integration', () => {
     
     console.log("Starting test for caching resolved tracks");
     const mockSdk = new MockSpotifySdk();
-    mockSdk.search.mockResolvedValue({
-      tracks: {
-        items: [resolvedTrack]
-      }
-    });
+    mockSdk.setSearchTracks([resolvedTrack]);
+    mockSdk.setSearchSelector(() => ({ tracks: ['resolved1'] }));
 
     expect(mockSdk.search).toHaveBeenCalledTimes(0);
     

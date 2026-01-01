@@ -3,6 +3,7 @@ import { act } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
 import { RemixWizardPage } from '../../pages/RemixWizardPage';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -128,7 +129,7 @@ describe('RemixWizardPage interactions', () => {
       root = createRoot(container);
       root.render(
         createElement(RemixWizardPage, {
-          sdk: {} as any,
+          sdk: new MockSpotifySdk() as any,
           navSlot: null,
           syncController: {} as any,
           recentTracksContainer: null

@@ -3,93 +3,54 @@ import { act, Simulate } from 'react-dom/test-utils';
 import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
 import { RemixWizardPage } from '../../pages/RemixWizardPage';
+import { MockSpotifySdk } from '../helpers/mockSpotifySdk';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const makeSdk = () => {
-  const sdk: any = {
-    currentUser: {
-      tracks: {
-        savedTracks: vi.fn(async () => ({ items: [], total: 0 }))
-      },
-      playlists: {
-        playlists: vi.fn(async (_limit: number = 50, _offset: number = 0) => ({
-          items: [
-            {
-              id: 'pl1',
-              name: 'My Mix',
-              description: 'desc',
-              images: [{ url: 'img' }],
-              owner: { display_name: 'me' },
-              tracks: { total: 10 }
-            }
-          ],
-          total: 1,
-          limit: 50,
-          offset: 0,
-          next: null
-        }))
-      },
-      albums: {
-        savedAlbums: vi.fn(async () => ({
-          items: [],
-          total: 0,
-          limit: 50,
-          offset: 0,
-          next: null
-        }))
-      }
-    },
-    playlists: {
-      getPlaylistItems: vi.fn(async (_id: string, _market: string, _fields: any, limit: number = 50, offset: number = 0) => ({
-        items: [],
-        total: 0,
-        limit,
-        offset,
-        next: null
-      }))
-    },
-    search: vi.fn(async (query: string, types: string[]) => {
-      if (types.includes('playlist')) {
-        return {
-          playlists: {
-            items: [
-              {
-                id: 'spl',
-                name: `Search ${query}`,
-                description: '',
-                images: [],
-                owner: { display_name: 'searcher' },
-                tracks: { total: 5 }
-              }
-            ],
-            total: 1,
-            limit: 50,
-            offset: 0,
-            next: null
-          }
-        };
-      }
-      return {
-        albums: {
-          items: [
-            {
-              id: 'sal',
-              name: `Album ${query}`,
-              release_date: '2020-01-01',
-              images: [],
-              artists: [{ name: 'Artist' }],
-              type: 'album'
-            }
-          ],
-          total: 1,
-          limit: 50,
-          offset: 0,
-          next: null
-        }
-      };
-    })
-  };
+  const sdk = new MockSpotifySdk(undefined, { recentLimit: 0 }) as any;
+  sdk.setUserPlaylists([
+    {
+      id: 'pl1',
+      name: 'My Mix',
+      description: 'desc',
+      images: [{ url: 'img' }],
+      owner: { display_name: 'me' },
+      tracks: { total: 10 },
+      type: 'playlist'
+    }
+  ]);
+  sdk.setSavedAlbums([]);
+  sdk.setSearchSelector((query, types) => {
+    if (types.includes('playlist')) {
+      return { playlists: ['spl'] };
+    }
+    if (types.includes('album')) {
+      return { albums: ['sal'] };
+    }
+    return {};
+  });
+  sdk.setSearchPlaylists([
+    {
+      id: 'spl',
+      name: 'Search rock',
+      description: '',
+      images: [],
+      owner: { display_name: 'searcher' },
+      tracks: { total: 5 },
+      type: 'playlist'
+    }
+  ]);
+  sdk.setSearchAlbums([
+    {
+      id: 'sal',
+      name: 'Album search',
+      release_date: '2020-01-01',
+      images: [],
+      artists: [{ name: 'Artist' }],
+      type: 'album'
+    }
+  ]);
   sdk.player = {
     getAvailableDevices: vi.fn(async () => ({ devices: [] })),
     getPlaybackState: vi.fn(async () => ({ device: null }))
@@ -280,8 +241,15 @@ describe('RemixWizardPage integration (Search ↔ Selected ↔ Remix)', () => {
     const searchList = container.querySelector('.search-results') as HTMLElement;
     const selectedList = container.querySelector('.selected-items-pane__list-wrapper') as HTMLElement;
 
+    const rect = { top: 120, bottom: 520, left: 0, right: 100, width: 100, height: 400, x: 0, y: 120 };
+
     Object.defineProperty(searchList, 'getBoundingClientRect', {
-      value: () => ({ top: 120, bottom: 520, left: 0, right: 100, width: 100, height: 400, x: 0, y: 120 })
+      configurable: true,
+      value: () => rect
+    });
+    Object.defineProperty(selectedList, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect
     });
 
     const searchRect = searchList.getBoundingClientRect();

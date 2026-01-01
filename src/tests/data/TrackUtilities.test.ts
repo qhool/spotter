@@ -57,17 +57,14 @@ describe('TrackUtilities', () => {
         uri: 'spotify:track:test123'
       };
 
-      const mockSdk = new MockSpotifySdk((query: string, types: string[], _market?: string, limit?: number) => {
+      const mockSdk = new MockSpotifySdk();
+      mockSdk.setSearchTracks([mockTrack]);
+      mockSdk.setSearchSelector((query: string, types: string[], _market?: string, limit?: number) => {
         expect(query).toContain('track:"Joy To You Baby"');
         expect(query).toContain('artist:"Josh Ritter"');
         expect(types).toEqual(['track']);
         expect(limit).toBe(20);
-        
-        return Promise.resolve({
-          tracks: {
-            items: [mockTrack]
-          }
-        });
+        return { tracks: ['test123'] };
       });
       
       const localTrack = createMockLocalTrack('spotify:local:Josh+Ritter:The+Beast+In+Its+Tracks:Joy+To+You+Baby:273', 'Joy To You Baby');
@@ -90,15 +87,12 @@ describe('TrackUtilities', () => {
         uri: 'spotify:track:test456'
       };
 
-      const mockSdk = new MockSpotifySdk((query: string) => {
+      const mockSdk = new MockSpotifySdk();
+      mockSdk.setSearchTracks([mockTrack]);
+      mockSdk.setSearchSelector((query: string) => {
         expect(query).toContain('Track With Spaces');
         expect(query).toContain('Artist Name');
-        
-        return Promise.resolve({
-          tracks: {
-            items: [mockTrack]
-          }
-        });
+        return { tracks: ['test456'] };
       });
       
       const localTrack = createMockLocalTrack('spotify:local:Artist%20Name:Album%20Title:Track%20With%20Spaces:180', 'Track With Spaces');
@@ -120,13 +114,9 @@ describe('TrackUtilities', () => {
         uri: 'spotify:track:poor123'
       };
 
-      const mockSdk = new MockSpotifySdk(() =>
-        Promise.resolve({
-          tracks: {
-            items: [poorMatch]
-          }
-        })
-      );
+      const mockSdk = new MockSpotifySdk();
+      mockSdk.setSearchTracks([poorMatch]);
+      mockSdk.setSearchSelector(() => ({ tracks: ['poor123'] }));
       
       const localTrack = createMockLocalTrack('spotify:local:Josh+Ritter:The+Beast+In+Its+Tracks:Joy+To+You+Baby:273', 'Joy To You Baby');
       const result = await resolveLocalTrack(mockSdk as any, localTrack);
@@ -155,13 +145,9 @@ describe('TrackUtilities', () => {
         uri: 'spotify:track:partial123'
       };
 
-      const mockSdk = new MockSpotifySdk(() =>
-        Promise.resolve({
-          tracks: {
-            items: [partialMatch, exactMatch] // Exact match comes second to test scoring
-          }
-        })
-      );
+      const mockSdk = new MockSpotifySdk();
+      mockSdk.setSearchTracks([partialMatch, exactMatch]); // Exact match comes second to test scoring
+      mockSdk.setSearchSelector(() => ({ tracks: ['partial123', 'exact123'] }));
       
       const localTrack = createMockLocalTrack('spotify:local:Josh+Ritter:The+Beast+In+Its+Tracks:Joy+To+You+Baby:273', 'Joy To You Baby');
       const result = await resolveLocalTrack(mockSdk as any, localTrack);

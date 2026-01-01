@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
 import { ExportPane } from '../../../components/panes/ExportPane';
 import type { Track } from '@spotify/web-api-ts-sdk';
+import { MockSpotifySdk } from '../../helpers/mockSpotifySdk';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -82,28 +83,20 @@ describe('ExportPane', () => {
   let container: HTMLDivElement;
   let root: ReturnType<typeof createRoot> | null;
 
-  const sdk = {
-    currentUser: {
-      playlists: {
-        playlists: vi.fn(async () => ({
-          items: [
-            {
-              id: 'existing',
-              name: 'Existing Playlist',
-              description: 'desc',
-              owner: { display_name: 'owner' },
-              images: [],
-              tracks: { total: 3 }
-            }
-          ]
-        }))
-      }
-    },
-    player: {
-      getAvailableDevices: vi.fn(async () => ({ devices: [] })),
-      getPlaybackState: vi.fn(async () => ({ device: null }))
+  const sdk = new MockSpotifySdk(undefined, { recentLimit: 0 }) as any;
+  sdk.setUserPlaylists([
+    {
+      id: 'existing',
+      name: 'Existing Playlist',
+      description: 'desc',
+      owner: { display_name: 'owner' },
+      images: [],
+      tracks: { total: 3 },
+      type: 'playlist'
     }
-  } as any;
+  ]);
+  sdk.player.getAvailableDevices = vi.fn(async () => ({ devices: [] }));
+  sdk.player.getPlaybackState = vi.fn(async () => ({ device: null }));
 
   const remixContainer = {
     getTracks: vi.fn(async () => ({

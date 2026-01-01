@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
 import { SearchPane } from '../../../components/panes/SearchPane';
 import { PlaylistContainer, AlbumContainer } from '../../../data/TrackContainer';
+import { MockSpotifySdk } from '../../helpers/mockSpotifySdk';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -49,70 +50,51 @@ const makePlaylist = (id: string, name: string) =>
   } as any);
 
 const makeSdk = () => {
-  const playlistItems = [
+  const sdk = new MockSpotifySdk(undefined, { recentLimit: 0 }) as any;
+  sdk.setUserPlaylists([
     makePlaylist('playlist-1', 'Daily Mix 1'),
-    makePlaylist('playlist-2', 'Focus Flow')
-  ];
-  const albumItems = [
+    makePlaylist('playlist-2', 'Focus Flow'),
+    makePlaylist('playlist-3', 'Extra')
+  ]);
+  sdk.setSavedAlbums([
     { album: makeAlbum('album-1', 'Synth Wave') },
     { album: makeAlbum('album-2', 'Indie Glow') },
-    { album: makeAlbum('album-3', 'Late Night') }
-  ];
-
-  const sdk: any = {
-    currentUser: {
-      tracks: {
-        savedTracks: vi.fn(async () => ({ items: [], total: 12 }))
-      },
-      playlists: {
-        playlists: vi.fn(async (_limit: number = 50, offset: number = 0) => ({
-          items: playlistItems.slice(offset, offset + 2),
-          total: playlistItems.length,
-          limit: 50,
-          offset,
-          next: offset + 2 < playlistItems.length ? 'next' : null
-        }))
-      },
-      albums: {
-        savedAlbums: vi.fn(async (_limit: number = 50, offset: number = 0) => ({
-          items: albumItems.slice(offset, offset + 2),
-          total: albumItems.length,
-          limit: 50,
-          offset,
-          next: offset + 2 < albumItems.length ? 'next' : null
-        }))
-      }
-    },
-    playlists: {
-      getPlaylistItems: vi.fn(async () => ({ items: [], total: 0 }))
-    },
-    albums: {
-      tracks: vi.fn(async () => ({ items: [], total: 0 }))
-    },
-    search: vi.fn(async (query: string, types: string[], _market?: string, limit: number = 50, offset: number = 0) => {
-      if (types.includes('playlist')) {
-        return {
-          playlists: {
-            items: [makePlaylist(`search-pl-${query}`, `Found ${query}`)],
-            total: 1,
-            limit,
-            offset,
-            next: null
-          }
-        };
-      }
-      return {
-        albums: {
-          items: [makeAlbum(`search-al-${query}`, `Album ${query}`)],
-          total: 1,
-          limit,
-          offset,
-          next: null
-        }
-      };
-    })
-  };
-
+    { album: makeAlbum('album-3', 'Late Night') },
+    { album: makeAlbum('album-4', 'Load More A') },
+    { album: makeAlbum('album-5', 'Load More B') }
+  ]);
+  sdk.setSearchSelector((query, types, _market, limit = 50, offset = 0) => {
+    if (types.includes('playlist')) {
+      return { playlists: [`search-pl-${query}`, 'search-pl-old'] };
+    }
+    if (types.includes('album')) {
+      return { albums: [`search-al-${query}`, 'search-al-old'] };
+    }
+    return {};
+  });
+  sdk.setSearchPlaylists([
+    makePlaylist('search-pl-mix', 'Found mix'),
+    makePlaylist('search-pl-old', 'Found mix (selected)'),
+    makePlaylist('search-pl-test', 'Found test')
+  ]);
+  sdk.setSearchAlbums([
+    makeAlbum('search-al-groove', 'Album groove'),
+    makeAlbum('search-al-old', 'Album mix'),
+    makeAlbum('search-al-test', 'Album test')
+  ]);
+  // Override savedAlbums to paginate in small chunks for load-more test
+  const saved = sdk.getSavedAlbumsSnapshot();
+  sdk.currentUser.albums.savedAlbums = vi.fn(async (_limit: number = 2, offset: number = 0) => {
+    const limit = 2;
+    const next = offset + limit < saved.length ? offset + limit : null;
+    return {
+      items: saved.slice(offset, offset + limit),
+      total: saved.length,
+      limit,
+      offset,
+      next
+    };
+  });
   return sdk;
 };
 
